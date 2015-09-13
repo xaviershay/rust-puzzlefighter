@@ -46,6 +46,33 @@ impl Game {
         }
     }
 
+    // Attempt to modify the current piece if present. modifier will be called
+    // with the current piece and should return a desired modification. If it
+    // is valid (no blocks are in the way), the current piece is replaced with
+    // it and true is returned. Otherwise, returns false.
+    fn move_piece<F>(&mut self, modifier: F) -> bool
+        where F : Fn(Piece) -> Piece {
+
+        let ref mut grid = self.grid;
+
+        if let Some(piece) = self.current_piece {
+            let new_piece = modifier(piece);
+
+            let occupied = new_piece.positions().iter().any(|p| {
+                !grid.empty(*p)
+            });
+
+            if !occupied {
+                for pb in new_piece.blocks().iter() {
+                    self.renderer.move_block(pb.block, pb.position);
+                }
+                self.current_piece = Some(new_piece);
+                return true;
+            }
+        }
+        false
+    }
+
     fn update(&mut self, e: &PistonWindow) {
         if let Some(button) = e.release_args() {
             use piston_window::Button::Keyboard;
@@ -62,77 +89,19 @@ impl Game {
             use piston_window::Button::Keyboard;
             use piston_window::Key;
 
-            let ref mut grid = self.grid;
-            let ref mut renderer = self.renderer;
-
-
             // TODO: Handle key repeat on our own timer.
             match button {
                 Keyboard(Key::Up) => {
-                    // Rotate!
-                    if let Some(piece) = self.current_piece {
-                        let new_piece = piece.anti_clockwise();
-
-                        let occupied = new_piece.positions().iter().any(|p| {
-                            !grid.empty(*p)
-                        });
-
-                        if !occupied {
-                            for pb in new_piece.blocks().iter() {
-                                renderer.move_block(pb.block, pb.position);
-                            }
-                            self.current_piece = Some(new_piece);
-                        }
-                    }
-                }
+                    self.move_piece(|current| { current.anti_clockwise() });
+                },
                 Keyboard(Key::Down) => {
-                    // Rotate!
-                    if let Some(piece) = self.current_piece {
-                        let new_piece = piece.clockwise();
-
-                        let occupied = new_piece.positions().iter().any(|p| {
-                            !grid.empty(*p)
-                        });
-
-                        if !occupied {
-                            for pb in new_piece.blocks().iter() {
-                                renderer.move_block(pb.block, pb.position);
-                            }
-                            self.current_piece = Some(new_piece);
-                        }
-                    }
-                }
+                    self.move_piece(|current| { current.clockwise() });
+                },
                 Keyboard(Key::Left) => {
-                    if let Some(piece) = self.current_piece {
-                        let new_piece = piece.offset(Direction::Left);
-
-                        let occupied = new_piece.positions().iter().any(|p| {
-                            !grid.empty(*p)
-                        });
-
-                        if !occupied {
-                            for pb in new_piece.blocks().iter() {
-                                renderer.move_block(pb.block, pb.position);
-                            }
-                            self.current_piece = Some(new_piece);
-                        }
-                    }
+                    self.move_piece(|current| { current.offset(Direction::Left) });
                 },
                 Keyboard(Key::Right) => {
-                    if let Some(piece) = self.current_piece {
-                        let new_piece = piece.offset(Direction::Right);
-
-                        let occupied = new_piece.positions().iter().any(|p| {
-                            !grid.empty(*p)
-                        });
-
-                        if !occupied {
-                            for pb in new_piece.blocks().iter() {
-                                renderer.move_block(pb.block, pb.position);
-                            }
-                            self.current_piece = Some(new_piece);
-                        }
-                    }
+                    self.move_piece(|current| { current.offset(Direction::Right) });
                 },
                 Keyboard(Key::Space) => {
                     self.speed = 0.05;
@@ -142,34 +111,20 @@ impl Game {
         }
 
         e.update(|args| {
-            let ref mut grid = self.grid;
-            let ref mut renderer = self.renderer;
-
             self.step_accumulator += args.dt;
 
             if self.step_accumulator > self.speed {
                 self.step_accumulator -= self.speed;
 
-                if let Some(piece) = self.current_piece {
-                    let new_piece = piece.offset(Direction::Down);
-
-                    let occupied = new_piece.blocks().iter().any(|p| {
-                        !grid.empty(p.position)
-                    });
-
-                    if occupied {
+                if !self.move_piece(|current| current.offset(Direction::Down) ) {
+                    if let Some(piece) = self.current_piece {
                         for pb in piece.blocks().iter() {
-                            let resting = grid.bottom(*pb);
-                            grid.set(resting.position, Some(pb.block));
+                            let resting = self.grid.bottom(*pb);
+                            self.grid.set(resting.position, Some(pb.block));
 
-                            renderer.drop_block(pb.block, resting.position);
+                            self.renderer.drop_block(pb.block, resting.position);
                         }
                         self.current_piece = None;
-                    } else {
-                        for pb in new_piece.blocks().iter() {
-                            renderer.move_block(pb.block, pb.position);
-                        }
-                        self.current_piece = Some(new_piece);
                     }
                 }
 
@@ -177,12 +132,12 @@ impl Game {
                     let pos = Position { x: 2, y: GRID_HEIGHT as i8 - 1 };
                     let block = Block::active(Color::rand());
                     let pb1 = PositionedBlock::new(block, pos);
-                    renderer.add_block(pb1.block, pb1.position);
+                    self.renderer.add_block(pb1.block, pb1.position);
 
                     let pos = Position { x: 3, y: GRID_HEIGHT as i8 - 1 };
                     let block = Block::active(Color::rand());
                     let pb2 = PositionedBlock::new(block, pos);
-                    renderer.add_block(pb2.block, pb2.position);
+                    self.renderer.add_block(pb2.block, pb2.position);
 
                     self.current_piece = Some(Piece {
                         blocks: [pb1.block, pb2.block],
