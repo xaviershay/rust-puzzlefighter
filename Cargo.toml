@@ -1,0 +1,15 @@
+[package]
+name = "rust-puzzlefighter"
+version = "0.1.0"
+authors = ["Xavier Shay <xavier@rhnh.net>"]
+
+[dependencies]
+piston_window = "*"
+piston2d-sprite = "*"
+pistoncore-sdl2_window = "*"
+piston2d-graphics = "*"
+find_folder = "*"
+gfx = "*"
+piston-gfx_texture = "*"
+uuid = "*"
+piston-ai_behavior = "*"
