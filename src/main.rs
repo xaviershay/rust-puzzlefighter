@@ -1,9 +1,14 @@
+mod textures;
+mod block_grid;
+mod values;
+
 extern crate sprite;
 extern crate piston_window;
 extern crate uuid;
 extern crate graphics;
 extern crate find_folder;
 extern crate gfx;
+extern crate gfx_device_gl;
 extern crate gfx_texture;
 
 use sprite::{Sprite,Scene};
@@ -17,63 +22,34 @@ use gfx_texture::{Texture};
 
 use piston_window::{PistonWindow,WindowSettings,Flip,TextureSettings};
 
+use textures::Textures;
+use block_grid::BlockGrid;
 
-struct Game;
 
-struct TextureFactory<R> where R: gfx::Resources {
-    block_textures: Vec<Rc<Texture<R>>>,
+struct Game {
+    grid: BlockGrid,
+    renderer: Box<BlockRenderer>,
 }
 
-impl<R> TextureFactory<R> where R: gfx::Resources  {
-    fn new(window: PistonWindow) -> TextureFactory<R> {
+impl Game {
+    fn new(renderer: Box<BlockRenderer>, dimensions: (usize, usize)) -> Self {
+        let (w, h) = dimensions;
 
-        let assets = find_folder::Search::ParentsThenKids(3, 3)
-            .for_folder("assets").unwrap();
-
-        let block_sprites = vec![
-            "element_blue_square.png",
-            "element_red_square.png",
-            "element_green_square.png",
-            "element_yellow_square.png",
-        ];
-        /*
-        let block_textures: Vec<Rc<Texture<R>>> = block_sprites.iter().map(|filename| {
-            Rc::new(Texture::from_path(
-                &mut *window.factory.borrow_mut(),
-                assets.join(filename),
-                Flip::None,
-                &TextureSettings::new()
-            ).unwrap() as Texture<R>)
-        }).collect();
-        */
-        let texture: Texture<R> = gfx_texture::Texture::from_path(
-            &mut *window.factory.borrow_mut(),
-            assets.join("element_red_square.png"),
-            Flip::None, &TextureSettings::new()
-        ).unwrap();
-        let block_textures = Vec::new();
-        block_textures.push(texture);
-
-        TextureFactory {
-            block_textures: block_textures,
-        }
-    }
-    fn from_color(&self, color: Color) -> Rc<Texture<R>> {
-        match color {
-            Red => self.block_textures[0],
-            _   => self.block_textures[1],
+        Game {
+            renderer: renderer,
+            grid: BlockGrid::new(w, h),
         }
     }
 }
 
 struct Sprites<I: ImageSize, R> where R: gfx::Resources {
     sprites: HashMap<Uuid, Sprite<I>>,
-    textures: TextureFactory<R>,
+    textures: Textures<R>,
 }
 
 struct Renderer<I: ImageSize, R> where R: gfx::Resources {
     scene: Scene<I>,
-    textures: TextureFactory<R>,
+    textures: Textures<R>,
 }
 
 struct Block {
@@ -81,19 +57,22 @@ struct Block {
 }
 
 impl<I: ImageSize, R> Renderer<I, R> where R: gfx::Resources {
-    fn new(textures: TextureFactory<R>, scene: Scene<I>) -> Renderer<I, R> {
+    fn new(textures: Textures<R>, scene: Scene<I>) -> Self {
         Renderer {
             textures: textures,
             scene: scene,
         }
     }
+}
 
-    fn load(&mut self, sprite: Sprite<I>) {
-        self.scene.add_child(sprite);
-    }
+trait BlockRenderer {
+    fn add_block(&mut self, block: Block);
+}
 
+impl<R: gfx::Resources> BlockRenderer for Renderer<Texture<R>, R> {
     fn add_block(&mut self, block: Block) {
-        let sprite = Sprite::from_texture(self.textures.for_color(block.color));
+        let texture = self.textures.get(block.color.to_texture_name());
+        let sprite = Sprite::from_texture(texture);
 
         let id = self.scene.add_child(sprite);
         // TODO: Keep track of block -> id mapping
@@ -106,6 +85,17 @@ enum Color {
     Red,
     Green,
     Yellow
+}
+
+impl Color {
+    fn to_texture_name(self) -> &'static str {
+        match self {
+            Color::Blue => "element_blue_square.png",
+            Color::Red => "element_red_square.png",
+            Color::Green => "element_green_square.png",
+            Color::Yellow => "element_yellow_square.png",
+        }
+    }
 }
 
 const GRID_HEIGHT: usize = 10;
@@ -122,11 +112,12 @@ fn main() {
         .build()
         .unwrap();
 
-    let textures = TextureFactory::new(window);
+    let textures = Textures::new(window);
 
     let mut scene = Scene::new();
 
     let mut renderer = Renderer::new(textures, scene);
     renderer.add_block(Block { color: Color::Red });
 
+    let mut game = Game::new(Box::new(renderer), (GRID_WIDTH, GRID_HEIGHT));
 }
