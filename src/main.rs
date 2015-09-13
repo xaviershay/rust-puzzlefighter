@@ -31,8 +31,11 @@ use block_grid::BlockGrid;
 use values::{Position,Block,Color};
 
 struct Game {
-    grid: BlockGrid,
     renderer: Box<BlockRenderer>,
+
+    // State
+    grid: BlockGrid,
+    falling: bool, // Whether a falling block is on the screen.
 }
 
 impl Game {
@@ -41,12 +44,22 @@ impl Game {
 
         Game {
             renderer: renderer,
+            falling: false,
             grid: BlockGrid::new(w, h),
         }
     }
 
     fn update(&mut self, e: &PistonWindow) {
-        self.renderer.event(&e);
+        let ref mut grid = self.grid;
+        let ref mut renderer = self.renderer;
+
+        if !self.falling {
+            let pos = grid.top_left();
+            let cell = grid.set(pos, Some(Block::new(Color::Red)));
+            renderer.add_block(cell.block.unwrap(), cell.position);
+            self.falling = true
+        }
+        renderer.event(&e);
     }
 }
 

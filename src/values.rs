@@ -1,5 +1,5 @@
 extern crate uuid;
-use self::uuid::*;
+use self::uuid::Uuid;
 
 use std::hash::{Hash, Hasher};
 
@@ -11,9 +11,19 @@ pub struct Position {
 
 #[derive(Copy, Clone, Debug)]
 pub struct Block {
-    id: uuid::Uuid,
+    id: Uuid,
     pub color: Color,
     pub falling: bool,
+}
+
+impl Block {
+    pub fn new(color: Color) -> Self {
+        Block {
+            id: Uuid::new_v4(),
+            color: color,
+            falling: false,
+        }
+    }
 }
 
 impl PartialEq for Block {

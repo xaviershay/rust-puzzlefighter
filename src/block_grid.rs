@@ -30,8 +30,14 @@ impl BlockGrid {
         BlockGrid {cells: rows}
     }
 
-    pub fn set(&mut self, x: usize, y: usize, block: Option<Block>) {
-        self.cells[y][x] = BlockCell { position: Position { x: x, y: y }, block: block }
+    pub fn top_left(&self) -> Position {
+        Position { x: 0, y: self.cells.len() - 1 }
+    }
+
+    pub fn set(&mut self, position: Position, block: Option<Block>) -> BlockCell {
+        let cell = BlockCell { position: position, block: block };
+        self.cells[position.y][position.x] = cell;
+        cell
     }
 
     pub fn setCell(&mut self, cell: BlockCell, block: Option<Block>) {
