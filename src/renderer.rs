@@ -56,6 +56,14 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
         sprite.set_anchor(0.0, 0.0);
 
         let id = self.scene.add_child(sprite);
+        self.scene.run(id,
+            &Action(
+                MoveTo(0.00,
+                    position.x as f64 * CELL_WIDTH,
+                    (GRID_HEIGHT - position.y - 1) as f64 * CELL_HEIGHT
+                )
+            )
+        );
         self.sprites.insert(block, id);
     }
 

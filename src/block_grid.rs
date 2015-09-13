@@ -12,6 +12,13 @@ pub struct BlockGrid {
     cells: Vec<Vec<BlockCell>>,
 }
 
+pub enum Ordering {
+    Any,
+    BottomToTop,
+    LeftToRight,
+    RightToLeft,
+}
+
 impl BlockGrid {
     pub fn new(width: usize, height: usize) -> BlockGrid {
         let mut rows = Vec::with_capacity(height);
@@ -92,11 +99,18 @@ impl BlockGrid {
         bottom_cell
     }
 
-    pub fn blocks(&self) -> LinkedList<BlockCell> {
+    pub fn blocks(&self, order: Ordering) -> LinkedList<BlockCell> {
         let mut list = LinkedList::new();
 
         for y in 0..self.cells.len() {
-            for x in 0..self.cells[y].len() {
+            let width = self.cells[y].len();
+
+            for x in 0..width {
+                let x = match order {
+                  Ordering::RightToLeft => { width - x - 1 },
+                  _ => { x }
+                };
+
                 let cell = self.cells[y][x];
                 if let Some(_) = cell.block {
                     list.push_back(self.cells[y][x]);
@@ -106,12 +120,15 @@ impl BlockGrid {
         list
     }
 
-    pub fn active_blocks(&self) -> LinkedList<BlockCell> {
+    pub fn active_blocks(&self, order: Ordering) -> LinkedList<BlockCell> {
         let mut list = LinkedList::new();
+        for cell in self.blocks(order).iter()
+            .filter(|x| { x.block.unwrap().active })
+            {
 
-        for cell in self.blocks().iter().filter(|x| { x.block.unwrap().active }) {
             list.push_back(*cell);
         }
+
         list
     }
 }

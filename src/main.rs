@@ -25,7 +25,7 @@ use gfx_texture::{Texture};
 use piston_window::*;
 
 use textures::Textures;
-use block_grid::BlockGrid;
+use block_grid::{BlockGrid,Ordering};
 use values::{Position,Block,Color};
 use renderer::{BlockRenderer,Renderer};
 
@@ -79,7 +79,7 @@ impl Game {
             // TODO: Handle key repeat on our own timer.
             match button {
                 Keyboard(Key::Left) => {
-                    for cell in grid.active_blocks() {
+                    for cell in grid.active_blocks(Ordering::LeftToRight) {
                         let block = cell.block.unwrap();
                         if let Some(left) = grid.left(cell) {
                             if let None = left.block {
@@ -92,8 +92,7 @@ impl Game {
                     }
                 },
                 Keyboard(Key::Right) => {
-                    // TODO: Iteration order matters here.
-                    for cell in grid.active_blocks() {
+                    for cell in grid.active_blocks(Ordering::RightToLeft) {
                         let block = cell.block.unwrap();
                         if let Some(right) = grid.right(cell) {
                             if let None = right.block {
@@ -122,17 +121,20 @@ impl Game {
                 self.step_accumulator -= self.speed;
 
                 // Move active blocks down
-                let mut done = false;
-                let active = grid.active_blocks();
+                let active = grid.active_blocks(Ordering::BottomToTop);
 
                 if active.is_empty() {
-                    // TODO: Undup with code above.
-                    let pos = grid.top_left();
+                    let pos = Position { x: 2, y: GRID_HEIGHT - 1 };
                     let cell = grid.set(pos, Some(Block::active(Color::rand())));
                     renderer.add_block(cell.block.unwrap(), cell.position);
-                    self.falling = true
+
+                    let pos = Position { x: 3, y: GRID_HEIGHT - 1 };
+                    let cell = grid.set(pos, Some(Block::active(Color::rand())));
+                    renderer.add_block(cell.block.unwrap(), cell.position);
                 } else {
-                    for cell in grid.active_blocks() {
+                    let mut done = false;
+
+                    for cell in active {
                         let block = cell.block.unwrap();
                         let below = grid.below(cell);
 
@@ -148,8 +150,20 @@ impl Game {
                                 renderer.drop_block(block, below.position);
                             }
                         } else {
-                            grid.setCell(cell, Some(block.make_inactive()));
                             done = true;
+                        }
+                    }
+
+                    if done {
+                        // Drop all active blocks
+                        for cell in grid.active_blocks(Ordering::Any) {
+                            let block = cell.block.unwrap();
+                            let bottom = grid.bottom(cell);
+
+                            grid.setCell(cell, None);
+                            grid.setCell(bottom, Some(block.make_inactive()));
+
+                            renderer.drop_block(block, bottom.position);
                         }
                     }
                 }
