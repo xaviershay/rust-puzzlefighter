@@ -156,6 +156,15 @@ impl PositionedBlock {
 
     pub fn x(&self) -> i8 { self.position.x  }
     pub fn y(&self) -> i8 { self.position.y  }
+
+    pub fn offset(&self, direction: Direction) -> Self {
+        let position = self.position.offset(direction);
+
+        PositionedBlock {
+            position: position,
+            ..*self
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
