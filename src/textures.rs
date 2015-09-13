@@ -19,11 +19,16 @@ impl Textures<gfx_device_gl::Resources> {
         let assets = find_folder::Search::ParentsThenKids(3, 3)
             .for_folder("assets").unwrap();
 
+        // TODO: Don't hardcode these.
         let block_sprites = vec![
             "element_blue_square.png",
             "element_red_square.png",
             "element_green_square.png",
             "element_yellow_square.png",
+            "element_blue_polygon.png",
+            "element_red_polygon.png",
+            "element_green_polygon.png",
+            "element_yellow_polygon.png",
         ];
         let mut store = HashMap::new();
 

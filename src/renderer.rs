@@ -50,7 +50,7 @@ pub trait BlockRenderer {
 
 impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> {
     fn add_block(&mut self, block: PositionedBlock) {
-        let texture = self.textures.get(block.block().color.to_texture_name());
+        let texture = self.textures.get(block.block().to_texture_name());
         let mut sprite = Sprite::from_texture(texture);
         sprite.set_anchor(0.0, 0.0);
 

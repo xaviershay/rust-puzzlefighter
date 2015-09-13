@@ -36,15 +36,36 @@ impl Position {
 pub struct Block {
     id: Uuid,
     pub color: Color,
+    breaker: bool,
 }
 
 impl Block {
-    pub fn active(color: Color) -> Self {
+    pub fn new(color: Color, breaker: bool) -> Self {
         Block {
             id: Uuid::new_v4(),
             color: color,
+            breaker: breaker,
         }
     }
+
+    pub fn to_texture_name(&self) -> &'static str {
+        if self.breaker {
+            match self.color {
+                Color::Blue   => "element_blue_polygon.png",
+                Color::Red    => "element_red_polygon.png",
+                Color::Green  => "element_green_polygon.png",
+                Color::Yellow => "element_yellow_polygon.png",
+            }
+        } else {
+            match self.color {
+                Color::Blue   => "element_blue_square.png",
+                Color::Red    => "element_red_square.png",
+                Color::Green  => "element_green_square.png",
+                Color::Yellow => "element_yellow_square.png",
+            }
+        }
+    }
+
 }
 
 impl PartialEq for Block {
@@ -98,8 +119,8 @@ pub struct Piece {
 impl Piece {
     pub fn rand(x: i8, y: i8) -> Self {
         let pos = Position::new(x, y);
-        let block1 = Block::active(Color::rand());
-        let block2 = Block::active(Color::rand());
+        let block1 = Block::new(Color::rand(), false);
+        let block2 = Block::new(Color::rand(), true);
 
         Piece {
             blocks: [block1, block2],
@@ -187,15 +208,6 @@ pub enum Color {
 }
 
 impl Color {
-    pub fn to_texture_name(self) -> &'static str {
-        match self {
-            Color::Blue => "element_blue_square.png",
-            Color::Red => "element_red_square.png",
-            Color::Green => "element_green_square.png",
-            Color::Yellow => "element_yellow_square.png",
-        }
-    }
-
     pub fn rand() -> Self {
         use self::rand::*;
 
