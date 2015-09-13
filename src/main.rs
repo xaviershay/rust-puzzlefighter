@@ -68,15 +68,46 @@ impl Game {
 
             // TODO: Handle key repeat on our own timer.
             match button {
+                Keyboard(Key::Up) => {
+                    // Rotate!
+                    if let Some(piece) = self.current_piece {
+                        let new_piece = piece.anti_clockwise();
+
+                        let occupied = new_piece.positions().iter().any(|p| {
+                            !grid.empty(*p)
+                        });
+
+                        if !occupied {
+                            for pb in new_piece.blocks().iter() {
+                                renderer.move_block(pb.block, pb.position);
+                            }
+                            self.current_piece = Some(new_piece);
+                        }
+                    }
+                }
                 Keyboard(Key::Down) => {
                     // Rotate!
+                    if let Some(piece) = self.current_piece {
+                        let new_piece = piece.clockwise();
+
+                        let occupied = new_piece.positions().iter().any(|p| {
+                            !grid.empty(*p)
+                        });
+
+                        if !occupied {
+                            for pb in new_piece.blocks().iter() {
+                                renderer.move_block(pb.block, pb.position);
+                            }
+                            self.current_piece = Some(new_piece);
+                        }
+                    }
                 }
                 Keyboard(Key::Left) => {
                     if let Some(piece) = self.current_piece {
                         let new_piece = piece.offset(Direction::Left);
 
                         let occupied = new_piece.positions().iter().any(|p| {
-                            !grid.empty(*p) 
+                            !grid.empty(*p)
                         });
 
                         if !occupied {
@@ -92,7 +123,7 @@ impl Game {
                         let new_piece = piece.offset(Direction::Right);
 
                         let occupied = new_piece.positions().iter().any(|p| {
-                            !grid.empty(*p) 
+                            !grid.empty(*p)
                         });
 
                         if !occupied {
@@ -123,7 +154,7 @@ impl Game {
                     let new_piece = piece.offset(Direction::Down);
 
                     let occupied = new_piece.blocks().iter().any(|p| {
-                        !grid.empty(p.position) 
+                        !grid.empty(p.position)
                     });
 
                     if occupied {

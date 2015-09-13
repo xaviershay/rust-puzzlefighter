@@ -59,6 +59,26 @@ pub enum Direction {
     Left
 }
 
+impl Direction {
+    pub fn clockwise(&self) -> Self {
+        match *self {
+            Direction::Up    => Direction::Right,
+            Direction::Right => Direction::Down,
+            Direction::Down  => Direction::Left,
+            Direction::Left  => Direction::Up,
+        }
+    }
+
+    pub fn anti_clockwise(&self) -> Self {
+        match *self {
+            Direction::Up    => Direction::Left,
+            Direction::Right => Direction::Up,
+            Direction::Down  => Direction::Right,
+            Direction::Left  => Direction::Down,
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct Piece {
     // TODO: These shouldn't be public
@@ -78,13 +98,18 @@ impl Piece {
         list
     }
 
+    // Return blocks with positions, bottom to top ordered.
     pub fn blocks(&self) -> [PositionedBlock; 2] {
         let position = self.position;
 
-        [
+        let positions = [
             PositionedBlock::new(self.blocks[0], position),
             PositionedBlock::new(self.blocks[1], position.offset(self.direction)),
-        ]
+        ];
+        match self.direction {
+            Direction::Down => { [positions[1], positions[0]] },
+            _               => { positions },
+        }
     }
 
     pub fn offset(&self, direction: Direction) -> Self {
@@ -92,6 +117,24 @@ impl Piece {
 
         Piece {
             position: position,
+            ..*self
+        }
+    }
+
+    pub fn clockwise(&self) -> Self {
+        let direction = self.direction.clockwise();
+
+        Piece {
+            direction: direction,
+            ..*self
+        }
+    }
+
+    pub fn anti_clockwise(&self) -> Self {
+        let direction = self.direction.anti_clockwise();
+
+        Piece {
+            direction: direction,
             ..*self
         }
     }
