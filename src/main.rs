@@ -38,6 +38,9 @@ struct Game {
 
     // Time since last block step.
     step_accumulator: f64,
+
+    // Seconds between block steps.
+    speed: f64,
 }
 
 impl Game {
@@ -48,52 +51,109 @@ impl Game {
             renderer: renderer,
             falling: false,
             step_accumulator: 0.0,
+            speed: 0.3,
             grid: BlockGrid::new(w, h),
         }
     }
 
     fn update(&mut self, e: &PistonWindow) {
+        if let Some(button) = e.release_args() {
+            use piston_window::Button::Keyboard;
+            use piston_window::Key;
+
+            match button {
+                Keyboard(Key::Space) => {
+                    self.speed = 0.3
+                },
+                _ => {},
+            }
+        }
+        if let Some(button) = e.press_args() {
+            use piston_window::Button::Keyboard;
+            use piston_window::Key;
+
+            let ref mut grid = self.grid;
+            let ref mut renderer = self.renderer;
+
+
+            // TODO: Handle key repeat on our own timer.
+            match button {
+                Keyboard(Key::Left) => {
+                    for cell in grid.active_blocks() {
+                        let block = cell.block.unwrap();
+                        if let Some(left) = grid.left(cell) {
+                            if let None = left.block {
+                                grid.setCell(left, Some(block));
+                                grid.setCell(cell, None);
+
+                                renderer.move_block(block, left.position);
+                            }
+                        }
+                    }
+                },
+                Keyboard(Key::Right) => {
+                    // TODO: Iteration order matters here.
+                    for cell in grid.active_blocks() {
+                        let block = cell.block.unwrap();
+                        if let Some(right) = grid.right(cell) {
+                            if let None = right.block {
+                                grid.setCell(right, Some(block));
+                                grid.setCell(cell, None);
+
+                                renderer.move_block(block, right.position);
+                            }
+                        }
+                    }
+                },
+                Keyboard(Key::Space) => {
+                    self.speed = 0.05;
+                }
+                _ => {},
+            }
+        }
+
         e.update(|args| {
             let ref mut grid = self.grid;
             let ref mut renderer = self.renderer;
 
-            if !self.falling {
-                let pos = grid.top_left();
-                let cell = grid.set(pos, Some(Block::active(Color::rand())));
-                renderer.add_block(cell.block.unwrap(), cell.position);
-                self.falling = true
-            }
             self.step_accumulator += args.dt;
 
-            if self.step_accumulator > 0.3 {
-                self.step_accumulator -= 0.3;
+            if self.step_accumulator > self.speed {
+                self.step_accumulator -= self.speed;
 
                 // Move active blocks down
                 let mut done = false;
-                for cell in grid.active_blocks() {
-                    let block = cell.block.unwrap();
-                    let below = grid.below(cell);
+                let active = grid.active_blocks();
 
-                    if below.is_some() && below.unwrap().block == None {
-                        let below = below.unwrap();
-
-                        grid.setCell(below, Some(block));
-                        grid.setCell(cell, None);
-
-                        renderer.move_block(block, below.position);
-                    } else {
-                        grid.setCell(cell, Some(block.make_inactive()));
-                        done = true;
-                    }
-                }
-
-                if done {
+                if active.is_empty() {
                     // TODO: Undup with code above.
                     let pos = grid.top_left();
                     let cell = grid.set(pos, Some(Block::active(Color::rand())));
                     renderer.add_block(cell.block.unwrap(), cell.position);
                     self.falling = true
+                } else {
+                    for cell in grid.active_blocks() {
+                        let block = cell.block.unwrap();
+                        let below = grid.below(cell);
+
+                        if below.is_some() && below.unwrap().block == None {
+                            let below = below.unwrap();
+
+                            grid.setCell(below, Some(block));
+                            grid.setCell(cell, None);
+
+                            if self.speed < 0.3 {
+                                renderer.move_block(block, below.position);
+                            } else {
+                                renderer.drop_block(block, below.position);
+                            }
+                        } else {
+                            grid.setCell(cell, Some(block.make_inactive()));
+                            done = true;
+                        }
+                    }
                 }
+
             }
         });
 
@@ -108,8 +168,8 @@ struct Sprites<I: ImageSize, R> where R: gfx::Resources {
 }
 */
 
-const GRID_HEIGHT: usize = 10;
-const GRID_WIDTH: usize = 8;
+const GRID_HEIGHT: usize = 13;
+const GRID_WIDTH: usize = 6;
 const CELL_WIDTH: f64 = 32.0;
 const CELL_HEIGHT: f64 = 32.0;
 

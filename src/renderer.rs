@@ -23,8 +23,8 @@ use textures::Textures;
 // TODO: De-dup with main.rs
 const CELL_WIDTH: f64 = 32.0;
 const CELL_HEIGHT: f64 = 32.0;
-const GRID_HEIGHT: usize = 10;
-const GRID_WIDTH: usize = 8;
+const GRID_HEIGHT: usize = 13;
+const GRID_WIDTH: usize = 6;
 
 pub struct Renderer<I: ImageSize, R> where R: gfx::Resources {
     scene: Scene<I>,
@@ -46,6 +46,7 @@ pub trait BlockRenderer {
     fn event(&mut self, event: &PistonWindow) {}
     fn add_block(&mut self, block: Block, position: Position) {}
     fn move_block(&mut self, block: Block, position: Position) {}
+    fn drop_block(&mut self, block: Block, position: Position) {}
 }
 
 impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> {
@@ -61,6 +62,21 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
     fn move_block(&mut self, block: Block, position: Position) {
         let sprite = self.sprites.get(&block).unwrap();
 
+        self.scene.stop_all(*sprite);
+        self.scene.run(*sprite,
+            &Action(
+                MoveTo(0.01,
+                    position.x as f64 * CELL_WIDTH,
+                    (GRID_HEIGHT - position.y - 1) as f64 * CELL_HEIGHT
+                )
+            )
+        );
+    }
+
+    fn drop_block(&mut self, block: Block, position: Position) {
+        let sprite = self.sprites.get(&block).unwrap();
+
+        self.scene.stop_all(*sprite);
         self.scene.run(*sprite,
             &Action(
                 MoveTo(0.1,

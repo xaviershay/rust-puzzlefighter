@@ -72,6 +72,26 @@ impl BlockGrid {
         }
     }
 
+    // Returns the further cell this block could fall to. Returns self if block
+    // cannot fall.
+    pub fn bottom(&self, cell: BlockCell) -> BlockCell {
+        let mut bottom_cell = cell;
+        loop {
+            match self.below(bottom_cell) {
+                Some(new_cell) => {
+                    if new_cell.block.is_some() {
+                        break;
+                    }
+                    bottom_cell = new_cell;
+                },
+                None => {
+                    break;
+                }
+            };
+        }
+        bottom_cell
+    }
+
     pub fn blocks(&self) -> LinkedList<BlockCell> {
         let mut list = LinkedList::new();
 
