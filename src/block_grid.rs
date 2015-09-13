@@ -1,4 +1,4 @@
-use values::{Block,Position,PositionedBlock,Direction};
+use values::{PositionedBlock,Direction};
 
 pub struct BlockGrid {
     cells: Vec<Vec<Option<PositionedBlock>>>,
@@ -18,16 +18,11 @@ impl BlockGrid {
         BlockGrid {cells: rows}
     }
 
-    pub fn set(&mut self, position: Position, block: Option<Block>) -> Option<PositionedBlock> {
-        let cell = match block {
-            None => None,
-            Some(block) => { Some(PositionedBlock::new(block, position)) },
-        };
-        self.cells[position.y() as usize()][position.x() as usize()] = cell;
-        cell
+    pub fn set(&mut self, block: PositionedBlock) {
+        self.cells[block.y() as usize()][block.x() as usize()] = Some(block);
     }
 
-    pub fn empty(&self, position: Position) -> bool {
+    pub fn empty(&self, position: PositionedBlock) -> bool {
         if let Some(row) = self.cells.get(position.y() as usize) {
             if let Some(cell) = row.get(position.x() as usize) {
                 return cell.is_none();
@@ -42,7 +37,7 @@ impl BlockGrid {
         loop {
             let new_cell = cell.offset(Direction::Down);
 
-            if self.empty(new_cell.position) {
+            if self.empty(new_cell) {
                 cell = new_cell
             } else {
                 break

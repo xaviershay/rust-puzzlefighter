@@ -5,12 +5,10 @@ use self::uuid::Uuid;
 
 use std::hash::{Hash, Hasher};
 
-use std::collections::LinkedList;
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Position {
-    pub x: i8,
-    pub y: i8,
+    x: i8,
+    y: i8,
 }
 
 impl Position {
@@ -98,14 +96,16 @@ pub struct Piece {
 }
 
 impl Piece {
-    pub fn positions(&self) -> LinkedList<Position> {
-        let mut list = LinkedList::new();
-        let position = self.position;
+    pub fn rand(x: i8, y: i8) -> Self {
+        let pos = Position::new(x, y);
+        let block1 = Block::active(Color::rand());
+        let block2 = Block::active(Color::rand());
 
-        list.push_back(position);
-        list.push_back(position.offset(self.direction));
-
-        list
+        Piece {
+            blocks: [block1, block2],
+            position: pos,
+            direction: Direction::Right,
+        }
     }
 
     // Return blocks with positions, bottom to top ordered.
@@ -152,8 +152,8 @@ impl Piece {
 
 #[derive(Copy, Clone, Debug)]
 pub struct PositionedBlock {
-    pub block: Block,
-    pub position: Position,
+    block: Block,
+    position: Position,
 }
 
 impl PositionedBlock {

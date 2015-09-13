@@ -14,7 +14,7 @@ use piston_window::*;
 
 use textures::Textures;
 use block_grid::{BlockGrid};
-use values::{Position,Block,Color,Piece,Direction,PositionedBlock};
+use values::{Piece,Direction};
 use renderer::{BlockRenderer,Renderer};
 
 struct Game {
@@ -58,8 +58,8 @@ impl Game {
         if let Some(piece) = self.current_piece {
             let new_piece = modifier(piece);
 
-            let occupied = new_piece.positions().iter().any(|p| {
-                !grid.empty(*p)
+            let occupied = new_piece.blocks().iter().any(|pb| {
+                !grid.empty(*pb)
             });
 
             if !occupied {
@@ -120,7 +120,7 @@ impl Game {
                     if let Some(piece) = self.current_piece {
                         for pb in piece.blocks().iter() {
                             let resting = self.grid.bottom(*pb);
-                            self.grid.set(resting.position, Some(pb.block));
+                            self.grid.set(resting);
 
                             self.renderer.drop_block(resting);
                         }
@@ -129,21 +129,12 @@ impl Game {
                 }
 
                 if self.current_piece.is_none() {
-                    let pos = Position::new(2, GRID_HEIGHT as i8 - 1);
-                    let block = Block::active(Color::rand());
-                    let pb1 = PositionedBlock::new(block, pos);
-                    self.renderer.add_block(pb1);
+                    let piece = Piece::rand(2, GRID_HEIGHT as i8 - 1);
+                    self.current_piece = Some(piece);
 
-                    let pos = Position::new(3, GRID_HEIGHT as i8 - 1);
-                    let block = Block::active(Color::rand());
-                    let pb2 = PositionedBlock::new(block, pos);
-                    self.renderer.add_block(pb2);
-
-                    self.current_piece = Some(Piece {
-                        blocks: [pb1.block, pb2.block],
-                        position: pb1.position,
-                        direction: Direction::Right,
-                    })
+                    for block in piece.blocks().iter() {
+                        self.renderer.add_block(*block);
+                    }
                 }
             }
         });
