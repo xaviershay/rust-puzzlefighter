@@ -14,7 +14,7 @@ pub struct Textures<R> where R: gfx::Resources {
 }
 
 impl Textures<gfx_device_gl::Resources> {
-    pub fn new(window: piston_window::PistonWindow) -> Self {
+    pub fn new(window: &piston_window::PistonWindow) -> Self {
 
         let assets = find_folder::Search::ParentsThenKids(3, 3)
             .for_folder("assets").unwrap();

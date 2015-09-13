@@ -17,14 +17,18 @@ use self::uuid::Uuid;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use graphics::math::{ Matrix2d };
+
+/*
 use graphics::{ Graphics, ImageSize };
 use gfx_texture::{Texture};
+*/
 
-use piston_window::{PistonWindow,WindowSettings,Flip,TextureSettings};
+use piston_window::*;
 
 use textures::Textures;
 use block_grid::BlockGrid;
-
+use values::{Position,Block,Color};
 
 struct Game {
     grid: BlockGrid,
@@ -40,6 +44,10 @@ impl Game {
             grid: BlockGrid::new(w, h),
         }
     }
+
+    fn update(&mut self, e: &PistonWindow) {
+        self.renderer.event(&e);
+    }
 }
 
 struct Sprites<I: ImageSize, R> where R: gfx::Resources {
@@ -52,10 +60,6 @@ struct Renderer<I: ImageSize, R> where R: gfx::Resources {
     textures: Textures<R>,
 }
 
-struct Block {
-    color: Color,
-}
-
 impl<I: ImageSize, R> Renderer<I, R> where R: gfx::Resources {
     fn new(textures: Textures<R>, scene: Scene<I>) -> Self {
         Renderer {
@@ -66,35 +70,26 @@ impl<I: ImageSize, R> Renderer<I, R> where R: gfx::Resources {
 }
 
 trait BlockRenderer {
-    fn add_block(&mut self, block: Block);
+    fn event(&mut self, event: &PistonWindow) {}
+    fn add_block(&mut self, block: Block, position: Position);
 }
 
-impl<R: gfx::Resources> BlockRenderer for Renderer<Texture<R>, R> {
-    fn add_block(&mut self, block: Block) {
+impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> {
+    fn add_block(&mut self, block: Block, position: Position) {
         let texture = self.textures.get(block.color.to_texture_name());
-        let sprite = Sprite::from_texture(texture);
+        let mut sprite = Sprite::from_texture(texture);
+        sprite.set_anchor(0.0, 0.0);
 
         let id = self.scene.add_child(sprite);
         // TODO: Keep track of block -> id mapping
     }
-}
 
-
-enum Color {
-    Blue,
-    Red,
-    Green,
-    Yellow
-}
-
-impl Color {
-    fn to_texture_name(self) -> &'static str {
-        match self {
-            Color::Blue => "element_blue_square.png",
-            Color::Red => "element_red_square.png",
-            Color::Green => "element_green_square.png",
-            Color::Yellow => "element_yellow_square.png",
-        }
+    fn event(&mut self, event: &PistonWindow) {
+        self.scene.event(event);
+        event.draw_2d(|c, g| {
+            clear([0.0, 0.0, 0.0, 1.0], g);
+            self.scene.draw(c.transform, g);
+        });
     }
 }
 
@@ -112,12 +107,15 @@ fn main() {
         .build()
         .unwrap();
 
-    let textures = Textures::new(window);
+    let textures = Textures::new(&window);
 
     let mut scene = Scene::new();
 
     let mut renderer = Renderer::new(textures, scene);
-    renderer.add_block(Block { color: Color::Red });
 
     let mut game = Game::new(Box::new(renderer), (GRID_WIDTH, GRID_HEIGHT));
+
+    for e in window {
+        game.update(&e);
+    }
 }
