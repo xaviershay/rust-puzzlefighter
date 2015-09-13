@@ -14,6 +14,13 @@ pub struct Position {
 }
 
 impl Position {
+    pub fn new(x: i8, y: i8) -> Self {
+        Position {
+            x: x,
+            y: y,
+        }
+    }
+
     pub fn offset(&self, direction: Direction) -> Self {
         match direction {
             Direction::Up    => { Position { x: self.x, y: self.y + 1 }},
@@ -22,6 +29,9 @@ impl Position {
             Direction::Right => { Position { x: self.x + 1, y: self.y }},
         }
     }
+
+    pub fn x(&self) -> i8 { self.x }
+    pub fn y(&self) -> i8 { self.y }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -154,8 +164,9 @@ impl PositionedBlock {
         }
     }
 
-    pub fn x(&self) -> i8 { self.position.x  }
-    pub fn y(&self) -> i8 { self.position.y  }
+    pub fn x(&self) -> i8 { self.position.x() }
+    pub fn y(&self) -> i8 { self.position.y() }
+    pub fn block(&self) -> Block { self.block }
 
     pub fn offset(&self, direction: Direction) -> Self {
         let position = self.position.offset(direction);

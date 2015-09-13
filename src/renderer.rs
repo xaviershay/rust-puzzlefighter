@@ -43,14 +43,14 @@ impl<I: ImageSize, R> Renderer<I, R> where R: gfx::Resources {
 
 pub trait BlockRenderer {
     fn event(&mut self, _event: &PistonWindow) {}
-    fn add_block(&mut self,  _block: Block, _position: Position) {}
-    fn move_block(&mut self, _block: Block, _position: Position) {}
-    fn drop_block(&mut self, _block: Block, _position: Position) {}
+    fn add_block(&mut self,  _block: PositionedBlock) {}
+    fn move_block(&mut self, _block: PositionedBlock) {}
+    fn drop_block(&mut self, _block: PositionedBlock) {}
 }
 
 impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> {
-    fn add_block(&mut self, block: Block, position: Position) {
-        let texture = self.textures.get(block.color.to_texture_name());
+    fn add_block(&mut self, block: PositionedBlock) {
+        let texture = self.textures.get(block.block().color.to_texture_name());
         let mut sprite = Sprite::from_texture(texture);
         sprite.set_anchor(0.0, 0.0);
 
@@ -58,37 +58,37 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
         self.scene.run(id,
             &Action(
                 MoveTo(0.00,
-                    position.x as f64 * CELL_WIDTH,
-                    (GRID_HEIGHT as i8 - position.y - 1) as f64 * CELL_HEIGHT
+                    block.x() as f64 * CELL_WIDTH,
+                    (GRID_HEIGHT as i8 - block.y() - 1) as f64 * CELL_HEIGHT
                 )
             )
         );
-        self.sprites.insert(block, id);
+        self.sprites.insert(block.block(), id);
     }
 
-    fn move_block(&mut self, block: Block, position: Position) {
-        let sprite = self.sprites.get(&block).unwrap();
+    fn move_block(&mut self, block: PositionedBlock) {
+        let sprite = self.sprites.get(&block.block()).unwrap();
 
         self.scene.stop_all(*sprite);
         self.scene.run(*sprite,
             &Action(
                 MoveTo(0.01,
-                    position.x as f64 * CELL_WIDTH,
-                    (GRID_HEIGHT as i8 - position.y - 1) as f64 * CELL_HEIGHT
+                    block.x() as f64 * CELL_WIDTH,
+                    (GRID_HEIGHT as i8 - block.y() - 1) as f64 * CELL_HEIGHT
                 )
             )
         );
     }
 
-    fn drop_block(&mut self, block: Block, position: Position) {
-        let sprite = self.sprites.get(&block).unwrap();
+    fn drop_block(&mut self, block: PositionedBlock) {
+        let sprite = self.sprites.get(&block.block()).unwrap();
 
         self.scene.stop_all(*sprite);
         self.scene.run(*sprite,
             &Action(
                 MoveTo(0.1,
-                    position.x as f64 * CELL_WIDTH,
-                    (GRID_HEIGHT as i8 - position.y - 1) as f64 * CELL_HEIGHT
+                    block.x() as f64 * CELL_WIDTH,
+                    (GRID_HEIGHT as i8 - block.y() - 1) as f64 * CELL_HEIGHT
                 )
             )
         );

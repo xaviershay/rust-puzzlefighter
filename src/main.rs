@@ -64,7 +64,7 @@ impl Game {
 
             if !occupied {
                 for pb in new_piece.blocks().iter() {
-                    self.renderer.move_block(pb.block, pb.position);
+                    self.renderer.move_block(*pb);
                 }
                 self.current_piece = Some(new_piece);
                 return true;
@@ -122,22 +122,22 @@ impl Game {
                             let resting = self.grid.bottom(*pb);
                             self.grid.set(resting.position, Some(pb.block));
 
-                            self.renderer.drop_block(pb.block, resting.position);
+                            self.renderer.drop_block(resting);
                         }
                         self.current_piece = None;
                     }
                 }
 
                 if self.current_piece.is_none() {
-                    let pos = Position { x: 2, y: GRID_HEIGHT as i8 - 1 };
+                    let pos = Position::new(2, GRID_HEIGHT as i8 - 1);
                     let block = Block::active(Color::rand());
                     let pb1 = PositionedBlock::new(block, pos);
-                    self.renderer.add_block(pb1.block, pb1.position);
+                    self.renderer.add_block(pb1);
 
-                    let pos = Position { x: 3, y: GRID_HEIGHT as i8 - 1 };
+                    let pos = Position::new(3, GRID_HEIGHT as i8 - 1);
                     let block = Block::active(Color::rand());
                     let pb2 = PositionedBlock::new(block, pos);
-                    self.renderer.add_block(pb2.block, pb2.position);
+                    self.renderer.add_block(pb2);
 
                     self.current_piece = Some(Piece {
                         blocks: [pb1.block, pb2.block],

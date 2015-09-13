@@ -23,13 +23,13 @@ impl BlockGrid {
             None => None,
             Some(block) => { Some(PositionedBlock::new(block, position)) },
         };
-        self.cells[position.y as usize()][position.x as usize()] = cell;
+        self.cells[position.y() as usize()][position.x() as usize()] = cell;
         cell
     }
 
     pub fn empty(&self, position: Position) -> bool {
-        if let Some(row) = self.cells.get(position.y as usize) {
-            if let Some(cell) = row.get(position.x as usize) {
+        if let Some(row) = self.cells.get(position.y() as usize) {
+            if let Some(cell) = row.get(position.x() as usize) {
                 return cell.is_none();
             }
         }
