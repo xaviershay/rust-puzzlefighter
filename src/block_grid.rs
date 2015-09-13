@@ -86,14 +86,12 @@ impl BlockGrid {
         list
     }
 
-    /*
-    pub fn falling_blocks(&self) -> LinkedList<BlockCell> {
+    pub fn active_blocks(&self) -> LinkedList<BlockCell> {
         let mut list = LinkedList::new();
 
-        for cell in self.blocks().iter().filter(|x| { x.block.unwrap().falling }) {
+        for cell in self.blocks().iter().filter(|x| { x.block.unwrap().active }) {
             list.push_back(*cell);
         }
         list
     }
-    */
 }
