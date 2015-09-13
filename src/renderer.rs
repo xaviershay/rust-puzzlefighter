@@ -23,8 +23,7 @@ use textures::Textures;
 // TODO: De-dup with main.rs
 const CELL_WIDTH: f64 = 32.0;
 const CELL_HEIGHT: f64 = 32.0;
-const GRID_HEIGHT: usize = 13;
-const GRID_WIDTH: usize = 6;
+const GRID_HEIGHT: u8 = 13;
 
 pub struct Renderer<I: ImageSize, R> where R: gfx::Resources {
     scene: Scene<I>,
@@ -43,10 +42,10 @@ impl<I: ImageSize, R> Renderer<I, R> where R: gfx::Resources {
 }
 
 pub trait BlockRenderer {
-    fn event(&mut self, event: &PistonWindow) {}
-    fn add_block(&mut self, block: Block, position: Position) {}
-    fn move_block(&mut self, block: Block, position: Position) {}
-    fn drop_block(&mut self, block: Block, position: Position) {}
+    fn event(&mut self, _event: &PistonWindow) {}
+    fn add_block(&mut self,  _block: Block, _position: Position) {}
+    fn move_block(&mut self, _block: Block, _position: Position) {}
+    fn drop_block(&mut self, _block: Block, _position: Position) {}
 }
 
 impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> {
@@ -60,7 +59,7 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
             &Action(
                 MoveTo(0.00,
                     position.x as f64 * CELL_WIDTH,
-                    (GRID_HEIGHT - position.y - 1) as f64 * CELL_HEIGHT
+                    (GRID_HEIGHT as i8 - position.y - 1) as f64 * CELL_HEIGHT
                 )
             )
         );
@@ -75,7 +74,7 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
             &Action(
                 MoveTo(0.01,
                     position.x as f64 * CELL_WIDTH,
-                    (GRID_HEIGHT - position.y - 1) as f64 * CELL_HEIGHT
+                    (GRID_HEIGHT as i8 - position.y - 1) as f64 * CELL_HEIGHT
                 )
             )
         );
@@ -89,7 +88,7 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
             &Action(
                 MoveTo(0.1,
                     position.x as f64 * CELL_WIDTH,
-                    (GRID_HEIGHT - position.y - 1) as f64 * CELL_HEIGHT
+                    (GRID_HEIGHT as i8 - position.y - 1) as f64 * CELL_HEIGHT
                 )
             )
         );

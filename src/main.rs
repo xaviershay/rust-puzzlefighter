@@ -10,23 +10,11 @@ extern crate find_folder;
 extern crate gfx;
 extern crate gfx_texture;
 
-use self::uuid::Uuid;
-
-use std::collections::HashMap;
-use std::rc::Rc;
-
-use graphics::math::{ Matrix2d };
-
-/*
-use graphics::{ Graphics, ImageSize };
-use gfx_texture::{Texture};
-*/
-
 use piston_window::*;
 
 use textures::Textures;
-use block_grid::{BlockGrid,Ordering};
-use values::{Position,Block,Color};
+use block_grid::{BlockGrid};
+use values::{Position,Block,Color,Piece,Direction,PositionedBlock};
 use renderer::{BlockRenderer,Renderer};
 
 struct Game {
@@ -34,13 +22,15 @@ struct Game {
 
     // State
     grid: BlockGrid,
-    falling: bool, // Whether a falling block is on the screen.
 
     // Time since last block step.
     step_accumulator: f64,
 
     // Seconds between block steps.
     speed: f64,
+
+    // Currently falling fiece
+    current_piece: Option<Piece>,
 }
 
 impl Game {
@@ -49,9 +39,9 @@ impl Game {
 
         Game {
             renderer: renderer,
-            falling: false,
             step_accumulator: 0.0,
             speed: 0.3,
+            current_piece: None,
             grid: BlockGrid::new(w, h),
         }
     }
@@ -78,29 +68,38 @@ impl Game {
 
             // TODO: Handle key repeat on our own timer.
             match button {
+                Keyboard(Key::Down) => {
+                    // Rotate!
+                }
                 Keyboard(Key::Left) => {
-                    for cell in grid.active_blocks(Ordering::LeftToRight) {
-                        let block = cell.block.unwrap();
-                        if let Some(left) = grid.left(cell) {
-                            if let None = left.block {
-                                grid.setCell(left, Some(block));
-                                grid.setCell(cell, None);
+                    if let Some(piece) = self.current_piece {
+                        let new_piece = piece.offset(Direction::Left);
 
-                                renderer.move_block(block, left.position);
+                        let occupied = new_piece.positions().iter().any(|p| {
+                            !grid.empty(*p) 
+                        });
+
+                        if !occupied {
+                            for pb in new_piece.blocks().iter() {
+                                renderer.move_block(pb.block, pb.position);
                             }
+                            self.current_piece = Some(new_piece);
                         }
                     }
                 },
                 Keyboard(Key::Right) => {
-                    for cell in grid.active_blocks(Ordering::RightToLeft) {
-                        let block = cell.block.unwrap();
-                        if let Some(right) = grid.right(cell) {
-                            if let None = right.block {
-                                grid.setCell(right, Some(block));
-                                grid.setCell(cell, None);
+                    if let Some(piece) = self.current_piece {
+                        let new_piece = piece.offset(Direction::Right);
 
-                                renderer.move_block(block, right.position);
+                        let occupied = new_piece.positions().iter().any(|p| {
+                            !grid.empty(*p) 
+                        });
+
+                        if !occupied {
+                            for pb in new_piece.blocks().iter() {
+                                renderer.move_block(pb.block, pb.position);
                             }
+                            self.current_piece = Some(new_piece);
                         }
                     }
                 },
@@ -120,54 +119,46 @@ impl Game {
             if self.step_accumulator > self.speed {
                 self.step_accumulator -= self.speed;
 
-                // Move active blocks down
-                let active = grid.active_blocks(Ordering::BottomToTop);
+                if let Some(piece) = self.current_piece {
+                    let new_piece = piece.offset(Direction::Down);
 
-                if active.is_empty() {
-                    let pos = Position { x: 2, y: GRID_HEIGHT - 1 };
-                    let cell = grid.set(pos, Some(Block::active(Color::rand())));
-                    renderer.add_block(cell.block.unwrap(), cell.position);
+                    let occupied = new_piece.blocks().iter().any(|p| {
+                        !grid.empty(p.position) 
+                    });
 
-                    let pos = Position { x: 3, y: GRID_HEIGHT - 1 };
-                    let cell = grid.set(pos, Some(Block::active(Color::rand())));
-                    renderer.add_block(cell.block.unwrap(), cell.position);
-                } else {
-                    let mut done = false;
+                    if occupied {
+                        for pb in piece.blocks().iter() {
+                            let resting = grid.bottom(*pb);
+                            grid.set(resting.position, Some(pb.block));
 
-                    for cell in active {
-                        let block = cell.block.unwrap();
-                        let below = grid.below(cell);
-
-                        if below.is_some() && below.unwrap().block == None {
-                            let below = below.unwrap();
-
-                            grid.setCell(below, Some(block));
-                            grid.setCell(cell, None);
-
-                            if self.speed < 0.3 {
-                                renderer.move_block(block, below.position);
-                            } else {
-                                renderer.drop_block(block, below.position);
-                            }
-                        } else {
-                            done = true;
+                            renderer.drop_block(pb.block, resting.position);
                         }
-                    }
-
-                    if done {
-                        // Drop all active blocks
-                        for cell in grid.active_blocks(Ordering::Any) {
-                            let block = cell.block.unwrap();
-                            let bottom = grid.bottom(cell);
-
-                            grid.setCell(cell, None);
-                            grid.setCell(bottom, Some(block.make_inactive()));
-
-                            renderer.drop_block(block, bottom.position);
+                        self.current_piece = None;
+                    } else {
+                        for pb in new_piece.blocks().iter() {
+                            renderer.move_block(pb.block, pb.position);
                         }
+                        self.current_piece = Some(new_piece);
                     }
                 }
 
+                if self.current_piece.is_none() {
+                    let pos = Position { x: 2, y: GRID_HEIGHT as i8 - 1 };
+                    let block = Block::active(Color::rand());
+                    let pb1 = PositionedBlock::new(block, pos);
+                    renderer.add_block(pb1.block, pb1.position);
+
+                    let pos = Position { x: 3, y: GRID_HEIGHT as i8 - 1 };
+                    let block = Block::active(Color::rand());
+                    let pb2 = PositionedBlock::new(block, pos);
+                    renderer.add_block(pb2.block, pb2.position);
+
+                    self.current_piece = Some(Piece {
+                        blocks: [pb1.block, pb2.block],
+                        position: pb1.position,
+                        direction: Direction::Right,
+                    })
+                }
             }
         });
 
@@ -175,21 +166,14 @@ impl Game {
     }
 }
 
-/*
-struct Sprites<I: ImageSize, R> where R: gfx::Resources {
-    sprites: HashMap<Uuid, Sprite<I>>,
-    textures: Textures<R>,
-}
-*/
-
-const GRID_HEIGHT: usize = 13;
-const GRID_WIDTH: usize = 6;
+const GRID_HEIGHT: u8 = 13;
+const GRID_WIDTH: u8 = 6;
 const CELL_WIDTH: f64 = 32.0;
 const CELL_HEIGHT: f64 = 32.0;
 
 fn main() {
-    let width = (GRID_WIDTH * CELL_WIDTH as usize) as u32;
-    let height = (GRID_HEIGHT * CELL_HEIGHT as usize) as u32;
+    let width = (GRID_WIDTH as u32 * CELL_WIDTH as u32) as u32;
+    let height = (GRID_HEIGHT as u32 * CELL_HEIGHT as u32) as u32;
     let window: PistonWindow =
         WindowSettings::new("Puzzle Fighter Turbo II", (width, height))
         .exit_on_esc(true)
@@ -198,9 +182,9 @@ fn main() {
 
     let textures = Textures::new(&window);
 
-    let mut renderer = Renderer::new(textures);
+    let renderer = Renderer::new(textures);
 
-    let mut game = Game::new(Box::new(renderer), (GRID_WIDTH, GRID_HEIGHT));
+    let mut game = Game::new(Box::new(renderer), (GRID_WIDTH as usize, GRID_HEIGHT as usize));
 
     for e in window {
         game.update(&e);

@@ -5,19 +5,29 @@ use self::uuid::Uuid;
 
 use std::hash::{Hash, Hasher};
 
+use std::collections::LinkedList;
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Position {
-    pub x: usize,
-    pub y: usize,
+    pub x: i8,
+    pub y: i8,
+}
+
+impl Position {
+    pub fn offset(&self, direction: Direction) -> Self {
+        match direction {
+            Direction::Up    => { Position { x: self.x, y: self.y + 1 }},
+            Direction::Down  => { Position { x: self.x, y: self.y - 1 }},
+            Direction::Left  => { Position { x: self.x - 1, y: self.y }},
+            Direction::Right => { Position { x: self.x + 1, y: self.y }},
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct Block {
     id: Uuid,
     pub color: Color,
-
-    // can the block still be controlled by the user, or has it settled?
-    pub active: bool,
 }
 
 impl Block {
@@ -25,14 +35,6 @@ impl Block {
         Block {
             id: Uuid::new_v4(),
             color: color,
-            active: true,
-        }
-    }
-
-    pub fn make_inactive(&self) -> Self {
-        Block {
-            active: false,
-            ..*self
         }
     }
 }
@@ -47,6 +49,70 @@ impl Hash for Block {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.id.hash(state);
     }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum Direction {
+    Up,
+    Right,
+    Down,
+    Left
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct Piece {
+    // TODO: These shouldn't be public
+    pub blocks: [Block; 2],
+    pub direction: Direction,
+    pub position: Position,
+}
+
+impl Piece {
+    pub fn positions(&self) -> LinkedList<Position> {
+        let mut list = LinkedList::new();
+        let position = self.position;
+
+        list.push_back(position);
+        list.push_back(position.offset(self.direction));
+
+        list
+    }
+
+    pub fn blocks(&self) -> [PositionedBlock; 2] {
+        let position = self.position;
+
+        [
+            PositionedBlock::new(self.blocks[0], position),
+            PositionedBlock::new(self.blocks[1], position.offset(self.direction)),
+        ]
+    }
+
+    pub fn offset(&self, direction: Direction) -> Self {
+        let position = self.position.offset(direction);
+
+        Piece {
+            position: position,
+            ..*self
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct PositionedBlock {
+    pub block: Block,
+    pub position: Position,
+}
+
+impl PositionedBlock {
+    pub fn new(block: Block, position: Position) -> Self {
+        PositionedBlock {
+            block: block,
+            position: position,
+        }
+    }
+
+    pub fn x(&self) -> i8 { self.position.x  }
+    pub fn y(&self) -> i8 { self.position.y  }
 }
 
 #[derive(Copy, Clone, Debug)]
