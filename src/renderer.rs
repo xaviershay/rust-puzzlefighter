@@ -46,6 +46,7 @@ pub trait BlockRenderer {
     fn add_block(&mut self,  _block: PositionedBlock) {}
     fn move_block(&mut self, _block: PositionedBlock) {}
     fn drop_block(&mut self, _block: PositionedBlock) {}
+    fn explode_block(&mut self, _block: PositionedBlock) {}
 }
 
 impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> {
@@ -92,6 +93,15 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
                 )
             )
         );
+    }
+
+    fn explode_block(&mut self, block: PositionedBlock) {
+        // TODO: Animate it!
+        {
+            let sprite = self.sprites.get(&block.block()).unwrap();
+            self.scene.remove_child(*sprite);
+        }
+        self.sprites.remove(&block.block());
     }
 
     fn event(&mut self, event: &PistonWindow) {

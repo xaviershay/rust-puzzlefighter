@@ -5,7 +5,7 @@ use self::uuid::Uuid;
 
 use std::hash::{Hash, Hasher};
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Position {
     x: i8,
     y: i8,
@@ -40,6 +40,8 @@ pub struct Block {
 }
 
 impl Block {
+    pub fn breaker(&self) -> bool { self.breaker }
+
     pub fn new(color: Color, breaker: bool) -> Self {
         Block {
             id: Uuid::new_v4(),
@@ -89,6 +91,14 @@ pub enum Direction {
 }
 
 impl Direction {
+    pub fn all() -> Vec<Direction> {
+        vec!(
+            Direction::Up,
+            Direction::Right,
+            Direction::Down,
+            Direction::Left
+        )
+    }
     pub fn clockwise(&self) -> Self {
         match *self {
             Direction::Up    => Direction::Right,
@@ -188,6 +198,9 @@ impl PositionedBlock {
     pub fn x(&self) -> i8 { self.position.x() }
     pub fn y(&self) -> i8 { self.position.y() }
     pub fn block(&self) -> Block { self.block }
+    pub fn position(&self) -> Position { self.position }
+    pub fn color(&self) -> Color { self.block.color }
+    pub fn breaker(&self) -> bool { self.block.breaker() }
 
     pub fn offset(&self, direction: Direction) -> Self {
         let position = self.position.offset(direction);
@@ -199,7 +212,7 @@ impl PositionedBlock {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Color {
     Blue,
     Red,

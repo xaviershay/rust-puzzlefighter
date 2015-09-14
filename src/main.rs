@@ -17,6 +17,8 @@ use block_grid::{BlockGrid};
 use values::{Piece,Direction};
 use renderer::{BlockRenderer,Renderer};
 
+use std::collections::HashSet;
+
 struct Game {
     renderer: Box<BlockRenderer>,
 
@@ -118,13 +120,60 @@ impl Game {
 
                 if !self.move_piece(|current| current.offset(Direction::Down) ) {
                     if let Some(piece) = self.current_piece {
+                        let mut new_blocks = Vec::new();
+
                         for pb in piece.blocks().iter() {
                             let resting = self.grid.bottom(*pb);
                             self.grid.set(resting);
 
+                            new_blocks.push(resting);
+
+                            // TODO: Wait until block is dropped before continuing.
                             self.renderer.drop_block(resting);
                         }
                         self.current_piece = None;
+
+                        let mut break_list = HashSet::new();
+                        break_list.insert(new_blocks[0].position());
+                        self.grid.find_contiguous(new_blocks[0].color(), &mut break_list);
+
+                        if break_list.len() > 1 {
+                            if break_list.iter().any(|position| { self.grid.at(*position).unwrap().breaker() }) {
+                                for position in break_list.iter() {
+                                    let existing = self.grid.clear(*position).unwrap();
+                                    self.renderer.explode_block(existing);
+                                }
+                            }
+                        }
+
+                        if (!break_list.contains(&new_blocks[1].position())) {
+                            let mut break_list = HashSet::new();
+                            break_list.insert(new_blocks[1].position());
+                            self.grid.find_contiguous(new_blocks[1].color(), &mut break_list);
+
+                            if break_list.iter().any(|position| { self.grid.at(*position).unwrap().breaker() }) {
+                                if break_list.len() > 1 {
+                                    for position in break_list.iter() {
+                                        let existing = self.grid.clear(*position).unwrap();
+                                        self.renderer.explode_block(existing);
+                                    }
+                                }
+                            }
+                        }
+
+                        for block in self.grid.blocks() {
+                            let bottom = self.grid.bottom(block);
+
+                            if bottom.position() != block.position() {
+                                self.grid.set(bottom);
+                                self.grid.clear(block.position());
+                                self.renderer.drop_block(bottom);
+                            }
+                        }
+                        // TODO: Redo with fold?
+                        // TODO: Optimize with neighbours() method?
+                        // TODO: Drop all remaining blocks
+                        // TODO: Recurse
                     }
                 }
 

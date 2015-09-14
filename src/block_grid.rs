@@ -1,4 +1,5 @@
-use values::{PositionedBlock,Direction};
+use values::{PositionedBlock,Direction,Position,Color};
+use std::collections::{LinkedList,HashSet};
 
 pub struct BlockGrid {
     cells: Vec<Vec<Option<PositionedBlock>>>,
@@ -22,13 +23,55 @@ impl BlockGrid {
         self.cells[block.y() as usize()][block.x() as usize()] = Some(block);
     }
 
+    pub fn clear(&mut self, position: Position) -> Option<PositionedBlock> {
+        let existing = self.at(position);
+        self.cells[position.y() as usize()][position.x() as usize()] = None;
+        existing
+    }
+
     pub fn empty(&self, position: PositionedBlock) -> bool {
         if let Some(row) = self.cells.get(position.y() as usize) {
             if let Some(cell) = row.get(position.x() as usize) {
                 return cell.is_none();
             }
         }
-        return false
+        false
+    }
+
+    pub fn at(&self, position: Position) -> Option<PositionedBlock> {
+        if let Some(row) = self.cells.get(position.y() as usize) {
+            if let Some(cell) = row.get(position.x() as usize) {
+                return *cell;
+            }
+        }
+        None
+    }
+
+    pub fn find_contiguous(&self, color: Color, blocks: &mut HashSet<Position>) {
+        let mut new_blocks = HashSet::new();
+
+        for block in blocks.iter() {
+            for direction in Direction::all() {
+                if let Some(new_block) = self.at(block.offset(direction)) {
+                    let pos = new_block.position();
+                    if !blocks.contains(&pos) && new_block.color() == color {
+                        new_blocks.insert(pos);
+                    }
+                }
+            }
+        }
+
+        let recurse = !new_blocks.is_empty();
+
+        for block in new_blocks.iter() {
+            blocks.insert(*block);
+        }
+
+        if recurse {
+            // TODO: More efficient to only iterate new_blocks
+            self.find_contiguous(color, blocks);
+        }
+
     }
 
     // Returns a positioned block dropped as far as possible.
@@ -44,5 +87,20 @@ impl BlockGrid {
             }
         }
         cell
+    }
+
+    pub fn blocks(&self) -> LinkedList<PositionedBlock> {
+        let mut list = LinkedList::new();
+
+        for y in 0..self.cells.len() {
+            for x in 0..self.cells[y].len() {
+                let cell = self.cells[y][x];
+                if cell.is_some() {
+                    list.push_back(cell.unwrap());
+                }
+            }
+        }
+
+        list
     }
 }
