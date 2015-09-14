@@ -96,28 +96,36 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
     }
 
     fn explode_block(&mut self, block: PositionedBlock) {
+        use self::rand::*;
         // TODO: Remove sprite once done.
         {
-            use self::rand::*;
-
-            let mut rng = thread_rng();
-
-            let t = rng.gen_range(0.4, 0.7);
-            let s = rng.gen_range(1.3, 1.7);
-
             let sprite = self.sprites.get(&block.block()).unwrap();
 
-            self.scene.run(*sprite,
-                &Action(FadeOut(t))
-            );
-            self.scene.run(*sprite,
-                &Action(ScaleBy(t, s, s))
-            );
-            self.scene.run(*sprite,
-                &Action(RotateBy(t, rng.gen_range(-90.0, 90.0)))
-            );
-            //self.scene.remove_child(*sprite);
+            // Remove and add to bring to foreground
+            self.scene.remove_child(*sprite);
         }
+        {
+            self.sprites.remove(&block.block());
+            self.add_block(block);
+        }
+
+        let sprite = self.sprites.get(&block.block()).unwrap();
+
+        let mut rng = thread_rng();
+
+        let t = rng.gen_range(0.4, 0.7);
+        let s = rng.gen_range(1.3, 1.7);
+
+        self.scene.run(*sprite,
+            &Action(FadeOut(t))
+        );
+        self.scene.run(*sprite,
+            &Action(ScaleBy(t, s, s))
+        );
+        self.scene.run(*sprite,
+            &Action(RotateBy(t, rng.gen_range(-90.0, 90.0)))
+        );
+            //self.scene.remove_child(*sprite);
         //self.sprites.remove(&block.block());
     }
 
