@@ -128,9 +128,12 @@ pub struct Piece {
 
 impl Piece {
     pub fn rand(x: i8, y: i8) -> Self {
+        use self::rand::*;
+
+        let mut rng = thread_rng();
         let pos = Position::new(x, y);
-        let block1 = Block::new(Color::rand(), false);
-        let block2 = Block::new(Color::rand(), true);
+        let block1 = Block::new(Color::rand(), rng.gen_weighted_bool(4));
+        let block2 = Block::new(Color::rand(), rng.gen_weighted_bool(4));
 
         Piece {
             blocks: [block1, block2],

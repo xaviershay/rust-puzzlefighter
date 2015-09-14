@@ -146,7 +146,7 @@ impl Game {
                             }
                         }
 
-                        if (!break_list.contains(&new_blocks[1].position())) {
+                        if !break_list.contains(&new_blocks[1].position()) {
                             let mut break_list = HashSet::new();
                             break_list.insert(new_blocks[1].position());
                             self.grid.find_contiguous(new_blocks[1].color(), &mut break_list);
