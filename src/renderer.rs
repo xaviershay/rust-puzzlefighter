@@ -3,13 +3,14 @@ extern crate piston_window;
 extern crate gfx;
 extern crate gfx_device_gl;
 extern crate gfx_texture;
+extern crate rand;
 
 extern crate sprite;
 extern crate ai_behavior;
 
 use self::uuid::Uuid;
 use self::piston_window::*;
-use self::sprite::{Sprite,Scene,MoveTo};
+use self::sprite::*;
 
 use self::ai_behavior::{
     Action,
@@ -52,15 +53,14 @@ pub trait BlockRenderer {
 impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> {
     fn add_block(&mut self, block: PositionedBlock) {
         let texture = self.textures.get(block.block().to_texture_name());
-        let mut sprite = Sprite::from_texture(texture);
-        sprite.set_anchor(0.0, 0.0);
+        let sprite = Sprite::from_texture(texture);
 
         let id = self.scene.add_child(sprite);
         self.scene.run(id,
             &Action(
                 MoveTo(0.00,
-                    block.x() as f64 * CELL_WIDTH,
-                    (GRID_HEIGHT as i8 - block.y() - 1) as f64 * CELL_HEIGHT
+                    block.x() as f64 * CELL_WIDTH + CELL_WIDTH / 2.0,
+                    (GRID_HEIGHT as i8 - block.y() - 1) as f64 * CELL_HEIGHT + CELL_HEIGHT / 2.0
                 )
             )
         );
@@ -74,8 +74,8 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
         self.scene.run(*sprite,
             &Action(
                 MoveTo(0.01,
-                    block.x() as f64 * CELL_WIDTH,
-                    (GRID_HEIGHT as i8 - block.y() - 1) as f64 * CELL_HEIGHT
+                    block.x() as f64 * CELL_WIDTH + CELL_WIDTH / 2.0,
+                    (GRID_HEIGHT as i8 - block.y() - 1) as f64 * CELL_HEIGHT + CELL_HEIGHT / 2.0
                 )
             )
         );
@@ -88,20 +88,37 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
         self.scene.run(*sprite,
             &Action(
                 MoveTo(0.1,
-                    block.x() as f64 * CELL_WIDTH,
-                    (GRID_HEIGHT as i8 - block.y() - 1) as f64 * CELL_HEIGHT
+                    block.x() as f64 * CELL_WIDTH + CELL_WIDTH / 2.0,
+                    (GRID_HEIGHT as i8 - block.y() - 1) as f64 * CELL_HEIGHT + CELL_HEIGHT / 2.0
                 )
             )
         );
     }
 
     fn explode_block(&mut self, block: PositionedBlock) {
-        // TODO: Animate it!
+        // TODO: Remove sprite once done.
         {
+            use self::rand::*;
+
+            let mut rng = thread_rng();
+
+            let t = rng.gen_range(0.4, 0.7);
+            let s = rng.gen_range(1.3, 1.7);
+
             let sprite = self.sprites.get(&block.block()).unwrap();
-            self.scene.remove_child(*sprite);
+
+            self.scene.run(*sprite,
+                &Action(FadeOut(t))
+            );
+            self.scene.run(*sprite,
+                &Action(ScaleBy(t, s, s))
+            );
+            self.scene.run(*sprite,
+                &Action(RotateBy(t, rng.gen_range(-90.0, 90.0)))
+            );
+            //self.scene.remove_child(*sprite);
         }
-        self.sprites.remove(&block.block());
+        //self.sprites.remove(&block.block());
     }
 
     fn event(&mut self, event: &PistonWindow) {
