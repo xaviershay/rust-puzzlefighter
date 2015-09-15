@@ -107,6 +107,9 @@ impl Game {
                 },
                 Keyboard(Key::Space) => {
                     self.speed = 0.05;
+                    if self.step_accumulator > 0.05 {
+                        self.step_accumulator = 0.05;
+                    }
                 }
                 _ => {},
             }
