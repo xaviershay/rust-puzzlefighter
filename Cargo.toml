@@ -5,7 +5,6 @@ authors = ["Xavier Shay <xavier@rhnh.net>"]
 
 [dependencies]
 piston_window = "*"
-piston2d-sprite = "*"
 pistoncore-sdl2_window = "*"
 piston2d-graphics = "*"
 find_folder = "*"
@@ -15,3 +14,7 @@ piston-gfx_texture = "*"
 uuid = "*"
 piston-ai_behavior = "*"
 rand = "*"
+
+[dependencies.piston2d-sprite]
+git = "https://github.com/xaviershay/sprite"
+branch = "issue-113"

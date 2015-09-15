@@ -109,24 +109,27 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
             self.add_block(block);
         }
 
-        let sprite = self.sprites.get(&block.block()).unwrap();
+        {
+            let sprite = self.sprites.get(&block.block()).unwrap();
 
-        let mut rng = thread_rng();
+            let mut rng = thread_rng();
 
-        let t = rng.gen_range(0.4, 0.7);
-        let s = rng.gen_range(1.3, 1.7);
+            let t = rng.gen_range(0.4, 0.7);
+            let s = rng.gen_range(1.3, 1.7);
 
-        self.scene.run(*sprite,
-            &Action(FadeOut(t))
-        );
-        self.scene.run(*sprite,
-            &Action(ScaleBy(t, s, s))
-        );
-        self.scene.run(*sprite,
-            &Action(RotateBy(t, rng.gen_range(-90.0, 90.0)))
-        );
-            //self.scene.remove_child(*sprite);
-        //self.sprites.remove(&block.block());
+            self.scene.run(*sprite,
+                &Action(FadeOut(t))
+            );
+            self.scene.run(*sprite,
+                &Action(ScaleBy(t, s, s))
+            );
+            self.scene.run(*sprite,
+                &Action(RotateBy(t, rng.gen_range(-90.0, 90.0)))
+            );
+            self.scene.remove_child_when_done(*sprite);
+        }
+
+        self.sprites.remove(&block.block());
     }
 
     fn event(&mut self, event: &PistonWindow) {
