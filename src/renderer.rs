@@ -15,6 +15,7 @@ use self::sprite::*;
 use self::ai_behavior::{
     Action,
     Sequence,
+    Wait,
 };
 
 use std::collections::HashMap;
@@ -35,7 +36,7 @@ pub struct Renderer<I: ImageSize, R> where R: gfx::Resources {
 
 macro_rules! delayed_animation {
     ($delay:expr, $body:expr) => {
-        Sequence(vec!(Action(MoveBy($delay, 0.0, 0.0)), Action($body)))
+        Sequence(vec!(Wait($delay), Action($body)))
     }
 }
 
@@ -94,12 +95,12 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
 
         self.scene.stop_all(*sprite);
         self.scene.run(*sprite,
-            &Action(
+            &Action(Ease(EaseFunction::QuadraticIn, Box::new(
                 MoveTo(0.2,
                     block.x() as f64 * CELL_WIDTH + CELL_WIDTH / 2.0,
                     (GRID_HEIGHT as i8 - block.y() - 1) as f64 * CELL_HEIGHT + CELL_HEIGHT / 2.0
                 )
-            )
+            )))
         );
     }
 
