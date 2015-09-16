@@ -184,7 +184,7 @@ impl Piece {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PositionedBlock {
     block: Block,
     position: Position,

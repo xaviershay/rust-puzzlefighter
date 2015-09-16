@@ -1,5 +1,5 @@
-use values::{PositionedBlock,Direction,Position,Color};
-use std::collections::{LinkedList,HashSet};
+use values::{PositionedBlock,Direction,Position};
+use std::collections::{LinkedList,HashMap};
 
 pub struct BlockGrid {
     cells: Vec<Vec<Option<PositionedBlock>>>,
@@ -47,31 +47,42 @@ impl BlockGrid {
         None
     }
 
-    pub fn find_contiguous(&self, color: Color, blocks: &mut HashSet<Position>) {
-        let mut new_blocks = HashSet::new();
+    // Make a new set
+    // For each breaker, find contigous color.
+    // If len > 1, add to set.
+    // Return map with distance to nearest sword.
+    pub fn find_breakers(&self) -> HashMap<PositionedBlock, u8> {
+        let mut result = HashMap::new();
+        for block in self.blocks() {
+            if block.breaker() {
+                if self.breaker_recurse(block, 1, &mut result) {
+                    result.insert(block, 0);
+                }
+            }
+        }
+        result
+    }
 
-        for block in blocks.iter() {
-            for direction in Direction::all() {
-                if let Some(new_block) = self.at(block.offset(direction)) {
-                    let pos = new_block.position();
-                    if !blocks.contains(&pos) && new_block.color() == color {
-                        new_blocks.insert(pos);
+    fn breaker_recurse(&self, block: PositionedBlock, depth: u8, result: &mut HashMap<PositionedBlock, u8>) -> bool {
+        let mut found = false;
+        for direction in Direction::all() {
+            if let Some(candidate) = self.at(block.position().offset(direction)) {
+                if candidate.color() == block.color() {
+                    let replace = {
+                        let default = 255; // TODO: u8::MAX
+                        let existing = result.get(&candidate).unwrap_or(&default);
+                        depth < *existing
+                    };
+
+                    if replace {
+                        found = true;
+                        result.insert(candidate, depth);
+                        self.breaker_recurse(candidate, depth + 1, result);
                     }
                 }
             }
         }
-
-        let recurse = !new_blocks.is_empty();
-
-        for block in new_blocks.iter() {
-            blocks.insert(*block);
-        }
-
-        if recurse {
-            // TODO: More efficient to only iterate new_blocks
-            self.find_contiguous(color, blocks);
-        }
-
+        found
     }
 
     // Returns a positioned block dropped as far as possible.

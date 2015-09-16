@@ -17,7 +17,12 @@ use block_grid::{BlockGrid};
 use values::{Piece,Direction};
 use renderer::{BlockRenderer,Renderer};
 
-use std::collections::HashSet;
+enum Phase {
+    NewPiece,
+    PieceFalling,
+    Settling,
+    Breaking(f64),
+}
 
 struct Game {
     renderer: Box<BlockRenderer>,
@@ -33,6 +38,9 @@ struct Game {
 
     // Currently falling fiece
     current_piece: Option<Piece>,
+
+    // Current update phase
+    phase: Phase,
 }
 
 impl Game {
@@ -44,6 +52,7 @@ impl Game {
             step_accumulator: 0.0,
             speed: 0.3,
             current_piece: None,
+            phase: Phase::NewPiece,
             grid: BlockGrid::new(w, h),
         }
     }
@@ -116,54 +125,58 @@ impl Game {
         }
 
         e.update(|args| {
-            self.step_accumulator += args.dt;
+            match self.phase {
+                // TODO: Is a noop phase really a phase? Probably not.
+                Phase::NewPiece => {
+                    let piece = Piece::rand(2, GRID_HEIGHT as i8 - 1);
+                    self.current_piece = Some(piece);
 
-            if self.step_accumulator > self.speed {
-                self.step_accumulator -= self.speed;
+                    for block in piece.blocks().iter() {
+                        self.renderer.add_block(*block);
+                    }
 
-                if !self.move_piece(|current| current.offset(Direction::Down) ) {
-                    if let Some(piece) = self.current_piece {
-                        let mut new_blocks = Vec::new();
+                    self.phase = Phase::PieceFalling;
+                },
+                Phase::PieceFalling => {
+                    self.step_accumulator += args.dt;
 
-                        for pb in piece.blocks().iter() {
-                            let resting = self.grid.bottom(*pb);
-                            self.grid.set(resting);
+                    if self.step_accumulator > self.speed {
+                        self.step_accumulator -= self.speed;
 
-                            new_blocks.push(resting);
-
-                            // TODO: Wait until block is dropped before continuing.
-                            self.renderer.drop_block(resting);
-                        }
-                        self.current_piece = None;
-
-                        let mut break_list = HashSet::new();
-                        break_list.insert(new_blocks[0].position());
-                        self.grid.find_contiguous(new_blocks[0].color(), &mut break_list);
-
-                        if break_list.len() > 1 {
-                            if break_list.iter().any(|position| { self.grid.at(*position).unwrap().breaker() }) {
-                                for position in break_list.iter() {
-                                    let existing = self.grid.clear(*position).unwrap();
-                                    self.renderer.explode_block(existing);
+                        if !self.move_piece(|current| current.offset(Direction::Down) ) {
+                            if let Some(piece) = self.current_piece {
+                                for pb in piece.blocks().iter() {
+                                    let resting = self.grid.bottom(*pb);
+                                    self.grid.set(resting);
+                                    self.renderer.drop_block(resting);
                                 }
+                                self.current_piece = None;
+                                self.phase = Phase::Settling;
                             }
                         }
+                    }
+                },
+                Phase::Settling => {
+                    let settled = self.grid.blocks().iter().all(|block| {
+                        !self.renderer.is_animating(*block)
+                    });
 
-                        if !break_list.contains(&new_blocks[1].position()) {
-                            let mut break_list = HashSet::new();
-                            break_list.insert(new_blocks[1].position());
-                            self.grid.find_contiguous(new_blocks[1].color(), &mut break_list);
+                    if settled {
+                        let break_depth = self.break_blocks() as f64;
 
-                            if break_list.iter().any(|position| { self.grid.at(*position).unwrap().breaker() }) {
-                                if break_list.len() > 1 {
-                                    for position in break_list.iter() {
-                                        let existing = self.grid.clear(*position).unwrap();
-                                        self.renderer.explode_block(existing);
-                                    }
-                                }
-                            }
+                        if break_depth > 0.0 {
+                            self.phase = Phase::Breaking(break_depth * 0.05);
+                        } else {
+                            self.phase = Phase::NewPiece;
                         }
+                    }
+                },
+                Phase::Breaking(dt) => {
+                    let dt = dt - args.dt;
 
+                    if dt > 0.0 {
+                        self.phase = Phase::Breaking(dt);
+                    } else {
                         for block in self.grid.blocks() {
                             let bottom = self.grid.bottom(block);
 
@@ -173,25 +186,33 @@ impl Game {
                                 self.renderer.drop_block(bottom);
                             }
                         }
-                        // TODO: Redo with fold?
-                        // TODO: Optimize with neighbours() method?
-                        // TODO: Drop all remaining blocks
-                        // TODO: Recurse
-                    }
-                }
-
-                if self.current_piece.is_none() {
-                    let piece = Piece::rand(2, GRID_HEIGHT as i8 - 1);
-                    self.current_piece = Some(piece);
-
-                    for block in piece.blocks().iter() {
-                        self.renderer.add_block(*block);
+                        self.phase = Phase::Settling
                     }
                 }
             }
         });
 
         self.renderer.event(&e);
+    }
+
+    fn break_blocks(&mut self) -> u8 {
+        let break_list = self.grid.find_breakers();
+
+        if break_list.is_empty() {
+            0
+        } else {
+            let mut highest_depth = 0;
+            for (block, depth) in &break_list {
+                self.grid.clear(block.position());
+                self.renderer.explode_block(*block, *depth);
+
+                if *depth > highest_depth {
+                    highest_depth = *depth;
+                }
+            }
+
+            highest_depth
+        }
     }
 }
 

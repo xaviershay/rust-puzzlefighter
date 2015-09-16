@@ -14,6 +14,7 @@ use self::sprite::*;
 
 use self::ai_behavior::{
     Action,
+    Sequence,
 };
 
 use std::collections::HashMap;
@@ -32,6 +33,12 @@ pub struct Renderer<I: ImageSize, R> where R: gfx::Resources {
     sprites: HashMap<Block, Uuid>,
 }
 
+macro_rules! delayed_animation {
+    ($delay:expr, $body:expr) => {
+        Sequence(vec!(Action(MoveBy($delay, 0.0, 0.0)), Action($body)))
+    }
+}
+
 impl<I: ImageSize, R> Renderer<I, R> where R: gfx::Resources {
     pub fn new(textures: Textures<R>) -> Self {
         Renderer {
@@ -47,7 +54,8 @@ pub trait BlockRenderer {
     fn add_block(&mut self,  _block: PositionedBlock) {}
     fn move_block(&mut self, _block: PositionedBlock) {}
     fn drop_block(&mut self, _block: PositionedBlock) {}
-    fn explode_block(&mut self, _block: PositionedBlock) {}
+    fn explode_block(&mut self, _block: PositionedBlock, _depth: u8) {}
+    fn is_animating(&self, block: PositionedBlock) -> bool;
 }
 
 impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> {
@@ -87,7 +95,7 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
         self.scene.stop_all(*sprite);
         self.scene.run(*sprite,
             &Action(
-                MoveTo(0.1,
+                MoveTo(0.2,
                     block.x() as f64 * CELL_WIDTH + CELL_WIDTH / 2.0,
                     (GRID_HEIGHT as i8 - block.y() - 1) as f64 * CELL_HEIGHT + CELL_HEIGHT / 2.0
                 )
@@ -95,9 +103,9 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
         );
     }
 
-    fn explode_block(&mut self, block: PositionedBlock) {
+    fn explode_block(&mut self, block: PositionedBlock, depth: u8) {
         use self::rand::*;
-        // TODO: Remove sprite once done.
+
         {
             let sprite = self.sprites.get(&block.block()).unwrap();
 
@@ -116,20 +124,23 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
 
             let t = rng.gen_range(0.4, 0.7);
             let s = rng.gen_range(1.3, 1.7);
+            let r = rng.gen_range(-90.0, 90.0);
+            let delay = depth as f64 * 0.05;
 
-            self.scene.run(*sprite,
-                &Action(FadeOut(t))
-            );
-            self.scene.run(*sprite,
-                &Action(ScaleBy(t, s, s))
-            );
-            self.scene.run(*sprite,
-                &Action(RotateBy(t, rng.gen_range(-90.0, 90.0)))
-            );
+            self.scene.run(*sprite, &delayed_animation!(delay, FadeOut(t)));
+            self.scene.run(*sprite, &delayed_animation!(delay, ScaleBy(t, s, s)));
+            self.scene.run(*sprite, &delayed_animation!(delay, RotateBy(t, r)));
+
             self.scene.remove_child_when_done(*sprite);
         }
 
         self.sprites.remove(&block.block());
+    }
+
+    fn is_animating(&self, block: PositionedBlock) -> bool {
+        let sprite = self.sprites.get(&block.block()).unwrap();
+
+        self.scene.running_for_child(*sprite) > 0
     }
 
     fn event(&mut self, event: &PistonWindow) {
