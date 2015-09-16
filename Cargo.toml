@@ -3,6 +3,9 @@ name = "rust-puzzlefighter"
 version = "0.1.0"
 authors = ["Xavier Shay <xavier@rhnh.net>"]
 
+[features]
+animation_test = []
+
 [dependencies]
 piston_window = "*"
 pistoncore-sdl2_window = "*"

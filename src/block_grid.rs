@@ -47,10 +47,6 @@ impl BlockGrid {
         None
     }
 
-    // Make a new set
-    // For each breaker, find contigous color.
-    // If len > 1, add to set.
-    // Return map with distance to nearest sword.
     pub fn find_breakers(&self) -> HashMap<PositionedBlock, u8> {
         let mut result = HashMap::new();
         for block in self.blocks() {

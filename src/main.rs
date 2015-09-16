@@ -14,7 +14,7 @@ use piston_window::*;
 
 use textures::Textures;
 use block_grid::{BlockGrid};
-use values::{Piece,Direction};
+use values::*;
 use renderer::{BlockRenderer,Renderer};
 
 enum Phase {
@@ -44,8 +44,33 @@ struct Game {
 }
 
 impl Game {
-    fn new(renderer: Box<BlockRenderer>, dimensions: (usize, usize)) -> Self {
+    fn new(mut renderer: Box<BlockRenderer>, dimensions: (usize, usize)) -> Self {
         let (w, h) = dimensions;
+        let mut grid = BlockGrid::new(w, h);
+
+        if cfg!(feature = "animation_test") {
+            let blocks = vec!(
+                PositionedBlock::new(Block::new(Color::Red,   true), Position::new(0, 0)),
+                PositionedBlock::new(Block::new(Color::Green, false), Position::new(0, 1)),
+                PositionedBlock::new(Block::new(Color::Green, false), Position::new(0, 2)),
+                PositionedBlock::new(Block::new(Color::Green, false), Position::new(0, 3)),
+                PositionedBlock::new(Block::new(Color::Red,   false), Position::new(0, 4)),
+                PositionedBlock::new(Block::new(Color::Red,   false), Position::new(0, 5)),
+                PositionedBlock::new(Block::new(Color::Red,   false), Position::new(0, 6)),
+                PositionedBlock::new(Block::new(Color::Red,   false), Position::new(0, 7)),
+                PositionedBlock::new(Block::new(Color::Blue,  false), Position::new(0, 8)),
+                PositionedBlock::new(Block::new(Color::Green, true), Position::new(1, 0)),
+                PositionedBlock::new(Block::new(Color::Green, false), Position::new(1, 1)),
+                PositionedBlock::new(Block::new(Color::Red,   false), Position::new(1, 2)),
+                PositionedBlock::new(Block::new(Color::Blue,  false), Position::new(1, 3)),
+                PositionedBlock::new(Block::new(Color::Red,   false), Position::new(1, 4)),
+                PositionedBlock::new(Block::new(Color::Blue,  false), Position::new(1, 5)),
+            );
+            for block in blocks {
+                grid.set(block);
+                renderer.add_block(block);
+            }
+        }
 
         Game {
             renderer: renderer,
@@ -53,7 +78,7 @@ impl Game {
             speed: 0.3,
             current_piece: None,
             phase: Phase::NewPiece,
-            grid: BlockGrid::new(w, h),
+            grid: grid,
         }
     }
 
