@@ -27,6 +27,7 @@ use textures::Textures;
 const CELL_WIDTH: f64 = 32.0;
 const CELL_HEIGHT: f64 = 32.0;
 const GRID_HEIGHT: u8 = 13;
+const GRID_WIDTH: u8 = 6;
 
 pub struct Renderer<I: ImageSize, R> where R: gfx::Resources {
     scene: Scene<I>,
@@ -145,10 +146,26 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
     }
 
     fn event(&mut self, event: &PistonWindow) {
+        use graphics::*;
+
         self.scene.event(event);
         event.draw_2d(|c, g| {
+            // Black background
             clear([0.0, 0.0, 0.0, 1.0], g);
-            self.scene.draw(c.transform, g);
+
+            // Center board
+            let cam = &c.trans(50.0, 50.0);
+
+            // Board bounding box
+            let dimensions = [0.0, 0.0,
+                CELL_WIDTH * GRID_WIDTH as f64,
+                CELL_HEIGHT * GRID_HEIGHT as f64
+            ];
+            Rectangle::new([0.2, 0.2, 0.2, 1.0])
+                .draw(dimensions, &cam.draw_state, cam.transform, g);
+
+            // Blocks
+            self.scene.draw(cam.transform, g);
         });
     }
 }

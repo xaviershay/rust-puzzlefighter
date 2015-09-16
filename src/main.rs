@@ -250,7 +250,7 @@ fn main() {
     let width = (GRID_WIDTH as u32 * CELL_WIDTH as u32) as u32;
     let height = (GRID_HEIGHT as u32 * CELL_HEIGHT as u32) as u32;
     let window: PistonWindow =
-        WindowSettings::new("Puzzle Fighter Turbo II", (width, height))
+        WindowSettings::new("Puzzle Fighter Turbo II", (width + 100 , height + 100))
         .exit_on_esc(true)
         .build()
         .unwrap();
