@@ -30,15 +30,22 @@ impl Attack {
         }
     }
 
-    fn apply(&self, dimensions: Dimension) -> LinkedList<PositionedBlock> {
+    fn apply(&self, dimensions: Dimension, attack_from_left: bool) -> LinkedList<PositionedBlock> {
         let mut attack = LinkedList::new();
 
         for i in 0..self.sprinkles {
             let ref pattern = self.strike_pattern;
             let color = pattern[i as usize % pattern.len()];
             let block = Block::new(color, false);
+            let x = i % dimensions.w();
+            let x = if attack_from_left {
+                x
+            } else {
+                dimensions.w() - x - 1
+            };
+
             let position = GridPosition::new(
-                (i % dimensions.w()) as i8,
+                x as i8,
                 (i / dimensions.w() + dimensions.h()) as i8);
 
             let pb = PositionedBlock::new(block, position);
@@ -61,9 +68,13 @@ pub struct Board {
 
     // Count of pending sprinkles
     attacks: LinkedList<Attack>,
+
     // Pending attack strength. Accumulates through combos then is dispatched
     // in a single attack when board is settled.
     strength: u32,
+
+    // Toggles each attack, alternate which sides sprinkles fall from.
+    attack_from_left: bool,
 
     // Time since last block step.
     step_accumulator: f64,
@@ -97,6 +108,7 @@ impl Board {
             next_piece: None,
             attacks: LinkedList::new(),
             strength: 0,
+            attack_from_left: false,
             phase: Phase::NewPiece,
 
             grid: BlockGrid::new(dimensions),
@@ -142,7 +154,7 @@ impl Board {
                 Phase::NewPiece => {
                     // Apply attack
                     if let Some(attack) = self.attacks.pop_front() {
-                        let blocks = attack.apply(self.dimensions);
+                        let blocks = attack.apply(self.dimensions, self.attack_from_left);
 
                         for pb in blocks {
                             self.grid_renderer.add_block(pb);
@@ -151,6 +163,7 @@ impl Board {
                             self.grid_renderer.drop_block(resting);
                         }
 
+                        self.attack_from_left = !self.attack_from_left;
                         self.phase = Phase::Settling(0);
                     }
 
@@ -192,12 +205,11 @@ impl Board {
                     });
 
                     if settled {
-                        let break_depth = self.break_blocks(enemy, combo_depth) as f64;
+                        let break_depth = self.break_blocks(combo_depth) as f64;
 
                         if break_depth > 0.0 {
                             self.phase = Phase::Breaking(break_depth * 0.05, combo_depth + 1);
                         } else {
-
                             enemy.attack(self.strength);
                             self.strength = 0;
                             self.phase = Phase::NewPiece;
@@ -255,7 +267,7 @@ impl Board {
         false
     }
 
-    fn break_blocks(&mut self, enemy: &mut Board, combo_depth: u32) -> u8 {
+    fn break_blocks(&mut self, combo_depth: u32) -> u8 {
         let break_list = self.grid.find_breakers();
 
         if break_list.is_empty() {
