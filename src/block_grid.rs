@@ -8,7 +8,7 @@ pub struct BlockGrid {
 impl BlockGrid {
     pub fn new(dimensions: Dimension) -> BlockGrid {
         let width = dimensions.w() as usize;
-        let height = dimensions.h() as usize;
+        let height = (dimensions.h() * 2) as usize;
 
         let mut rows = Vec::with_capacity(height);
         for _ in 0..height {

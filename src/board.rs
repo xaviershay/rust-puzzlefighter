@@ -64,7 +64,10 @@ impl Board {
             match self.phase {
                 // TODO: Is a noop phase really a phase? Probably not.
                 Phase::NewPiece => {
-                    let piece = Piece::rand(2, self.dimensions.h() as i8 - 1);
+                    // Dump sprinkles
+                    //
+                    // Create new piece
+                    let piece = Piece::rand(2, self.dimensions.h() as i8);
                     self.current_piece = Some(piece);
 
                     for block in piece.blocks().iter() {
