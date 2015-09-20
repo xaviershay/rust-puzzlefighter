@@ -2,51 +2,76 @@ use board::Board;
 use piston_window::*;
 use values::*;
 
+use std::collections::HashMap;
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+enum InputAction {
+    AntiClockwise,
+    Clockwise,
+    Left,
+    Right,
+    Turbo,
+}
+
 pub struct HumanPlayer {
-    _blah: bool,
+    input_map: HashMap<Button, InputAction>,
 }
 
 impl HumanPlayer {
-    pub fn new() -> Self {
+    pub fn new(left: bool) -> Self {
+        let mut inputs = HashMap::new();
+
+        if left {
+            inputs.insert(Button::Keyboard(Key::W), InputAction::AntiClockwise);
+            inputs.insert(Button::Keyboard(Key::S), InputAction::Clockwise);
+            inputs.insert(Button::Keyboard(Key::A), InputAction::Left);
+            inputs.insert(Button::Keyboard(Key::D), InputAction::Right);
+            inputs.insert(Button::Keyboard(Key::C), InputAction::Turbo);
+        } else {
+            inputs.insert(Button::Keyboard(Key::Up), InputAction::AntiClockwise);
+            inputs.insert(Button::Keyboard(Key::Down), InputAction::Clockwise);
+            inputs.insert(Button::Keyboard(Key::Left), InputAction::Left);
+            inputs.insert(Button::Keyboard(Key::Right), InputAction::Right);
+            inputs.insert(Button::Keyboard(Key::Space), InputAction::Turbo);
+        }
+
         HumanPlayer {
-            _blah: false,
+            input_map: inputs,
         }
     }
 
     pub fn update(&self, e: &PistonWindow, board: &mut Board) {
         if let Some(button) = e.release_args() {
-            use piston_window::Button::Keyboard;
-            use piston_window::Key;
+            let action = self.input_map.get(&button);
 
-            match button {
-                Keyboard(Key::Space) => {
+            match action {
+                Some(&InputAction::Turbo) => {
                     board.turbo(false)
                 },
                 _ => {},
             }
         }
         if let Some(button) = e.press_args() {
-            use piston_window::Button::Keyboard;
-            use piston_window::Key;
+            let action = self.input_map.get(&button);
 
             // TODO: Handle key repeat on our own timer.
-            match button {
-                Keyboard(Key::Up) => {
+            match action {
+                Some(&InputAction::AntiClockwise) => {
                     board.move_piece(|current| { current.anti_clockwise() });
                 },
-                Keyboard(Key::Down) => {
+                Some(&InputAction::Clockwise) => {
                     board.move_piece(|current| { current.clockwise() });
                 },
-                Keyboard(Key::Left) => {
+                Some(&InputAction::Left) => {
                     board.move_piece(|current| { current.offset(Direction::Left) });
                 },
-                Keyboard(Key::Right) => {
+                Some(&InputAction::Right) => {
                     board.move_piece(|current| { current.offset(Direction::Right) });
                 },
-                Keyboard(Key::Space) => {
+                Some(&InputAction::Turbo) => {
                     board.turbo(true);
                 }
-                _ => {},
+                None => {},
             }
         }
     }

@@ -73,7 +73,8 @@ fn main() {
                                     Dimension::new(6, 13),
                                     PixelPosition::new(right_x, gutter));
 
-    let left_player = HumanPlayer::new();
+    let left_player = HumanPlayer::new(true);
+    let right_player = HumanPlayer::new(false);
 
     for e in window {
         e.draw_2d(|_c, g| {
@@ -84,6 +85,7 @@ fn main() {
         });
 
         left_player.update(&e, &mut left_board);
+        right_player.update(&e, &mut right_board);
         left_board.update(&e);
         right_board.update(&e);
     }
