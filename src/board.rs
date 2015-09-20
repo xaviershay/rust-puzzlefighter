@@ -36,6 +36,9 @@ pub struct Board {
     phase: Phase,
 }
 
+const SLOW_SPEED: f64 = 0.5;
+const TURBO_SPEED: f64 = 0.05;
+
 impl Board {
     pub fn new(render_settings: Rc<RenderSettings>,
                dimensions: Dimension,
@@ -46,7 +49,7 @@ impl Board {
             dimensions: dimensions,
 
             step_accumulator: 0.0,
-            speed: 0.3,
+            speed: SLOW_SPEED,
             current_piece: None,
             phase: Phase::NewPiece,
 
@@ -177,12 +180,12 @@ impl Board {
 
     pub fn turbo(&mut self, enable: bool) {
         if enable {
-            self.speed = 0.05;
-            if self.step_accumulator > 0.05 {
-                self.step_accumulator = 0.05;
+            self.speed = TURBO_SPEED;
+            if self.step_accumulator > TURBO_SPEED {
+                self.step_accumulator = TURBO_SPEED;
             }
         } else {
-            self.speed = 0.3;
+            self.speed = SLOW_SPEED;
         }
     }
 }
