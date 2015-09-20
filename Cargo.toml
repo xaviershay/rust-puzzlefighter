@@ -1,5 +1,5 @@
 [package]
-name = "rust-puzzlefighter"
+name = "puzzlefighter"
 version = "0.1.0"
 authors = ["Xavier Shay <xavier@rhnh.net>"]
 
@@ -17,7 +17,15 @@ piston-gfx_texture = "*"
 uuid = "*"
 piston-ai_behavior = "*"
 rand = "*"
+bitflags = "*"
 
 [dependencies.piston2d-sprite]
 git = "https://github.com/xaviershay/sprite"
 branch = "issue-113"
+
+[[example]]
+name = "make_tiles"
+path = "examples/make_tiles.rs"
+
+[dev_dependencies.lodepng]
+git = "https://github.com/pornel/lodepng-rust.git"

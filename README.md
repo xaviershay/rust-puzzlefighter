@@ -4,6 +4,7 @@ A puzzle fighter/swordfighting clone as an excuse for me to learn rust.
 
 * Two-player keyboard controls (WASDC, arrows+space).
 * Sprinkle attacks with combo multiplier.
+* Fused blocks ("power gems").
 
 ![screenshot](./screenshot.png)
 
@@ -14,7 +15,6 @@ Play by cloning the repo and running:
 ### Major TODOs
 
 * Some kind of endgame.
-* Power blocks.
 * Gamepad input.
 * Different drop patterns.
 * Counter blocks.

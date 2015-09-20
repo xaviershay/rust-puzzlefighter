@@ -85,7 +85,9 @@ pub trait RenderSettings {
 
 impl RenderSettings for GlRenderSettings<gfx_device_gl::Resources> {
     fn build(&self, position: PixelPosition, dimensions: Dimension) -> Box<BlockRenderer> {
-        let texture = self.textures.get("element_blue_square.png");
+        // Use an arbitrary block to get the cell dimensions. Assumes they are
+        // all the same.
+        let texture = self.textures.get(Block::new(Color::Blue, false).to_texture_name());
         let cell_dimensions = Dimension::from_tuple(texture.get_size());
 
         Box::new(Renderer::new(self.textures.clone(), position, dimensions, cell_dimensions)) as Box<BlockRenderer>
@@ -95,11 +97,12 @@ impl RenderSettings for GlRenderSettings<gfx_device_gl::Resources> {
 pub trait BlockRenderer {
     fn event(&mut self, _event: &PistonWindow) {}
     fn add_block(&mut self,  _block: PositionedBlock) {}
+    fn transition_block(&mut self, _block: PositionedBlock) {}
     fn move_block(&mut self, _block: PositionedBlock) {}
     fn drop_block(&mut self, _block: PositionedBlock) {}
     fn remove_block(&mut self, _block: PositionedBlock) {}
     fn explode_block(&mut self, _block: PositionedBlock, _depth: u8) {}
-    fn is_animating(&self, block: PositionedBlock) -> bool;
+    fn is_animating(&self, block: PositionedBlock) -> bool { false }
 }
 
 impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> {
@@ -109,6 +112,14 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
         sprite.set_position(self.scale_x(block.x()), self.scale_y(block.y()));
         let id = self.scene.add_child(sprite);
         self.sprites.insert(block.block(), id);
+    }
+
+    fn transition_block(&mut self, block: PositionedBlock) {
+        let texture = self.textures.get(block.block().to_texture_name());
+        let sprite = self.sprites.get(&block.block()).unwrap();
+
+        let mut child = self.scene.child_mut(*sprite).unwrap();
+        child.set_texture(texture);
     }
 
     fn move_block(&mut self, block: PositionedBlock) {

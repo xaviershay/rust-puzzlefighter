@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate bitflags;
+
 mod textures;
 mod block_grid;
 mod values;

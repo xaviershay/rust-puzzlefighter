@@ -33,7 +33,7 @@ impl Attack {
     fn apply(&self, dimensions: Dimension, attack_from_left: bool) -> LinkedList<PositionedBlock> {
         let mut attack = LinkedList::new();
 
-        for i in 0..self.sprinkles {
+        for i in 0..self.sprinkles+1 {
             let ref pattern = self.strike_pattern;
             let color = pattern[i as usize % pattern.len()];
             let block = Block::new(color, false);
@@ -117,6 +117,49 @@ impl Board {
         };
         board.generate_next_piece();
         board
+    }
+
+    // Dumps a debug representation to stdout
+    pub fn debug(&self) {
+        self.grid().debug();
+    }
+
+    // Helper method for testing. Provides a string syntax for specifying a
+    // board. Capital first letter of color makes a block, lower case makes a
+    // breaker.
+    pub fn add_blocks(&mut self, lines: Vec<&'static str>) {
+        let height = lines.len();
+        for y in 0..height {
+            let mut x = 0;
+            let line = lines[y];
+            for c in line.chars() {
+                let y = (height - y - 1) as i8;
+                let block = match c {
+                    'R' => Some(Block::new(Color::Red, false)),
+                    'G' => Some(Block::new(Color::Green, false)),
+                    'B' => Some(Block::new(Color::Blue, false)),
+                    'Y' => Some(Block::new(Color::Yellow, false)),
+                    'r' => Some(Block::new(Color::Red, true)),
+                    'g' => Some(Block::new(Color::Green, true)),
+                    'b' => Some(Block::new(Color::Blue, true)),
+                    'y' => Some(Block::new(Color::Yellow, true)),
+                    _   => None
+                };
+
+                if let Some(block) = block {
+                    let position = GridPosition::new(x, y);
+                    self.grid_renderer.add_block(
+                        self.grid.set(PositionedBlock::new(block, position))
+                    );
+                }
+                x += 1
+            }
+        }
+    }
+
+    // For use in testing and AIs
+    pub fn grid(&self) -> &BlockGrid {
+        &self.grid
     }
 
     pub fn attack(&mut self, strength: u32) {
@@ -205,6 +248,8 @@ impl Board {
                     });
 
                     if settled {
+                        self.fuse_blocks();
+
                         let break_depth = self.break_blocks(combo_depth) as f64;
 
                         if break_depth > 0.0 {
@@ -240,6 +285,180 @@ impl Board {
         self.next_renderer.event(&event);
     }
 
+    // Scan the board looking for blocks that can be fused together. In
+    // general, non-special blocks of 2x2 or more of the same color "fuse"
+    // together to form a single larger "block" that is both aesthetically
+    // pleasing and provides more strength when broken. Internally, they are
+    // still tracked as individual blocks but with extra attributes indicating
+    // they are part of a larger piece.
+    pub fn fuse_blocks(&mut self) {
+        for block in self.grid.blocks() {
+            // Extract a 2x2 square to examine
+            let block   = self.grid.at(block.position()).unwrap();
+
+            let up      = self.grid.at(block.position().offset(Direction::Up));
+            let right   = self.grid.at(block.position().offset(Direction::Right));
+            let upright = self.grid.at(block.position().offset(Direction::Up).offset(Direction::Right));
+
+            // If the cells do not call contain bricks, move on. No fusing will
+            // be possible.
+            if up.is_some() && right.is_some() && upright.is_some() {
+                let up      = up.unwrap();
+                let right   = right.unwrap();
+                let upright = upright.unwrap();
+
+                if !block.is_fused() {
+                    // Base case is that all blocks are the same color,
+                    // non-special, and not already fused. In which case, fuse
+                    // then all together to make a 2x2.
+                    //
+                    // This is the only case that is checked for unfused
+                    // blocks. Everything else is covered below.
+
+                    let fuse = vec!(block, up, right, upright).into_iter().all(|x| {
+                        x.can_fuse_with(block) && !x.is_fused()
+                    });
+
+                    if fuse {
+                        let x = self.grid.set(block.fuse(SIDE_BOTTOM | SIDE_LEFT));
+                        self.grid_renderer.transition_block(x);
+
+                        let x = self.grid.set(up.fuse(SIDE_TOP | SIDE_LEFT));
+                        self.grid_renderer.transition_block(x);
+
+                        let x = self.grid.set(right.fuse(SIDE_BOTTOM | SIDE_RIGHT));
+                        self.grid_renderer.transition_block(x);
+
+                        let x = self.grid.set(upright.fuse(SIDE_TOP | SIDE_RIGHT));
+                        self.grid_renderer.transition_block(x);
+                    }
+                } else {
+                    // All other fusing is done by "extending" existing fused
+                    // blocks.
+                    //
+                    // The particular corners used as starting points below are
+                    // such that they are the first potential starting point
+                    // that will be examined.
+                    //
+                    // BOTTOM_LEFT blocks there were just created by the above base
+                    // case are not re-examined (i.e. this is done in an else
+                    // clause). Due to iteration order, any case where it would
+                    // extend left or down would have already been covered.
+                    match block.borders() {
+                        SIDE_TOP_LEFT => {
+                            self.extrude(block, Direction::Up, Direction::Right);
+                        },
+                        SIDE_BOTTOM_RIGHT => {
+                            self.extrude(block, Direction::Right, Direction::Up);
+                        },
+                        SIDE_BOTTOM_LEFT => {
+                            self.extrude(block, Direction::Left, Direction::Up);
+                            self.extrude(block, Direction::Down, Direction::Right);
+                        },
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+
+    // Try extruding a fused block (identified by the given anchor corner) in a
+    // particular extrude_direction. traverse_direction indicates the direction
+    // to find the opposite corner block - in theory it could be derived but
+    // it's simpler to just specify it.
+    fn extrude(&mut self, anchor: PositionedBlock, extrude_direction: Direction, traverse_direction: Direction) {
+        let ref mut grid = self.grid;
+
+        // If extruding up, the "extrude side" is up.
+        let extrude_side    = extrude_direction.to_side();
+        // If extruding up, the "fused sides" are left and right.
+        let fused_sides     = extrude_direction.clockwise().to_side() |
+                              extrude_direction.anti_clockwise().to_side();
+        let opposite_corner = extrude_side | traverse_direction.to_side();
+
+        let mut block = anchor;
+        let mut good = true;
+
+        // Iterate over every block on the edge, and compare it to the
+        // adjancent block that would potentially fuse with it. This loop is
+        // only guaranteed to terminate with a well formed board (which, short
+        // of bugs, should always be the case).
+        while good {
+            let pos = block.position();
+            let border_pos = pos.offset(extrude_direction);
+
+            // Assume the adjacent block cannot fuse. There are many conditions
+            // that must be met!
+            good = false;
+
+            // There actually has to be an adjacent block.
+            if let Some(alt) = grid.at(border_pos) {
+                let can_fuse = block.can_fuse_with(alt) && (
+                    // This extra check prevents fusing across corners. A 2x2
+                    // block with a 2x3 and a 2x2 sitting next to each other on
+                    // top of it should not fuse.
+                    !alt.is_fused() || (
+                        block.borders() & fused_sides ==
+                        alt.borders()   & fused_sides
+                    ));
+
+                if can_fuse {
+                    // This is potentially a good fuse!
+                    good = true;
+
+                    if block.borders().contains(opposite_corner) {
+                        // We found the opposite corner, so exit the loop.
+                        break;
+                    } else {
+                        // Move to the next block on the edge.
+                        block = grid
+                            .at(pos.offset(traverse_direction))
+                            .expect("Bad fuse state")
+                    }
+                }
+            }
+        }
+
+        if good {
+            // Now that we've determined a fuse should occur, traverse again
+            // over the edge but actually perform the fuse.
+            let mut block = anchor;
+
+            // This is the same loop as before, but we since we know the fuse
+            // is good we can assume the break will be hit.
+            loop {
+                let pos = block.position();
+                let border_pos = pos.offset(extrude_direction);
+                let alt = grid.at(border_pos)
+                    .expect("Present per loop above");
+
+                // Calculate correct sides for the newly fused blocks.
+                let sides = block.borders() & fused_sides;
+                let alt_sides = if alt.is_fused() {
+                    SIDE_NONE
+                } else {
+                    extrude_side
+                };
+                let alt_sides = alt_sides | sides;
+
+
+                let x = grid.set(alt.fuse(alt_sides));
+                self.grid_renderer.transition_block(x);
+
+                let x = grid.set(block.fuse(sides));
+                self.grid_renderer.transition_block(x);
+
+                if block.borders().contains(opposite_corner) {
+                    // We found the opposite corner, so exit the loop.
+                    break;
+                }
+                block = grid
+                    .at(pos.offset(traverse_direction))
+                    .expect("Present per loop above")
+            }
+        }
+    }
+
     // Attempt to modify the current piece if present. modifier will be called
     // with the current piece and should return a desired modification. If it
     // is valid (no blocks are in the way), the current piece is replaced with
@@ -273,23 +492,43 @@ impl Board {
         if break_list.is_empty() {
             0
         } else {
+            let mut attack: u32 = 0;
+
+            // Find bottom left corners
+            for (block, _) in &break_list {
+                if block.is_fused() {
+                    if block.borders().contains(SIDE_BOTTOM_LEFT) {
+                        use std::cmp::min;
+
+                        let mut top_left     = self.grid.find_opposite_corner(block, Direction::Up);
+                        let mut bottom_right = self.grid.find_opposite_corner(block, Direction::Right);
+
+                        let w = bottom_right.x() - block.x() + 1;
+                        let h = top_left.y() - block.y() + 1;
+
+                        let fuse_multiplier = min(w, h) as u32;
+                        let fuse_attack = (w * h) as u32 * fuse_multiplier;
+
+                        attack += fuse_attack;
+                    }
+                } else if !block.breaker() {
+                    attack += 1
+                }
+            }
+
+            self.strength += (attack / 2) * (combo_depth + 1);
+
+            // Destroy everything
             let mut highest_depth = 0;
-            let mut non_breakers = 0;
 
             for (block, depth) in &break_list {
                 self.grid.clear(block.position());
                 self.grid_renderer.explode_block(*block, *depth);
 
-                if !block.breaker() {
-                    non_breakers += 1;
-                }
-
                 if *depth > highest_depth {
                     highest_depth = *depth;
                 }
             }
-
-            self.strength += non_breakers / 2 * (combo_depth + 1);
 
             highest_depth
         }

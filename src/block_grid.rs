@@ -22,8 +22,25 @@ impl BlockGrid {
         BlockGrid {cells: rows}
     }
 
-    pub fn set(&mut self, block: PositionedBlock) {
+    pub fn debug(&self) {
+        let height = self.cells.len();
+        for y in 0..height {
+            let y = height - y - 1;
+            for x in 0..self.cells[y].len() {
+                let cell = self.cells[y][x];
+                if cell.is_some() {
+                    print!("{}", &cell.unwrap().debug_char());
+                } else {
+                    print!(" ");
+                }
+            }
+            println!("");
+        }
+    }
+
+    pub fn set(&mut self, block: PositionedBlock) -> PositionedBlock {
         self.cells[block.y() as usize()][block.x() as usize()] = Some(block);
+        block
     }
 
     pub fn clear(&mut self, position: GridPosition) -> Option<PositionedBlock> {
@@ -48,6 +65,18 @@ impl BlockGrid {
             }
         }
         None
+    }
+
+    pub fn find_opposite_corner(&self, anchor: &PositionedBlock, direction: Direction) -> PositionedBlock {
+        let mut corner = *anchor;
+
+        while !corner.borders().intersects(direction.to_side()) {
+            corner = self
+                .at(corner.position().offset(direction))
+                .expect("Bad fuse state")
+        }
+
+        corner
     }
 
     pub fn find_breakers(&self) -> HashMap<PositionedBlock, u8> {
@@ -76,7 +105,12 @@ impl BlockGrid {
                     if replace {
                         found = true;
                         result.insert(candidate, depth);
-                        self.breaker_recurse(candidate, depth + 1, result);
+                        let modifier = if candidate.is_fused() {
+                            0
+                        } else {
+                            1
+                        };
+                        self.breaker_recurse(candidate, depth + modifier, result);
                     }
                 }
             }

@@ -76,42 +76,121 @@ impl GridPosition {
     pub fn y(&self) -> i8 { self.y }
 }
 
+bitflags! {
+    flags Sides: u8 {
+        const SIDE_LEFT   = 0b00000001,
+        const SIDE_RIGHT  = 0b00000010,
+        const SIDE_TOP    = 0b00000100,
+        const SIDE_BOTTOM = 0b00001000,
+        const SIDE_NONE   = 0b00000000,
+        const SIDE_BOTTOM_LEFT  = SIDE_LEFT.bits  | SIDE_BOTTOM.bits,
+        const SIDE_BOTTOM_RIGHT = SIDE_RIGHT.bits | SIDE_BOTTOM.bits,
+        const SIDE_TOP_LEFT     = SIDE_LEFT.bits  | SIDE_TOP.bits,
+        const SIDE_TOP_RIGHT    = SIDE_RIGHT.bits | SIDE_TOP.bits,
+        const SIDE_ALL = SIDE_LEFT.bits |
+                         SIDE_RIGHT.bits |
+                         SIDE_TOP.bits |
+                         SIDE_BOTTOM.bits,
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct Block {
     id: Uuid,
     pub color: Color,
     breaker: bool,
+    borders: Sides,
 }
 
 impl Block {
     pub fn breaker(&self) -> bool { self.breaker }
+
+    pub fn debug_char(&self) -> String {
+        // TODO: ANSI colors! Currently only suitable for debugging fuses.
+        self.borders.debug_char().to_string()
+    }
 
     pub fn new(color: Color, breaker: bool) -> Self {
         Block {
             id: Uuid::new_v4(),
             color: color,
             breaker: breaker,
+            borders: SIDE_ALL,
         }
     }
 
-    pub fn to_texture_name(&self) -> &'static str {
-        if self.breaker {
+    pub fn is_fused(&self) -> bool {
+        self.borders != SIDE_ALL
+    }
+
+    pub fn to_texture_name(&self) -> String {
+        let name = if self.breaker {
             match self.color {
-                Color::Blue   => "element_blue_polygon.png",
-                Color::Red    => "element_red_polygon.png",
-                Color::Green  => "element_green_polygon.png",
-                Color::Yellow => "element_yellow_polygon.png",
+                Color::Blue   => "blue_breaker",
+                Color::Red    => "red_breaker",
+                Color::Green  => "green_breaker",
+                Color::Yellow => "yellow_breaker",
             }
         } else {
             match self.color {
-                Color::Blue   => "element_blue_square.png",
-                Color::Red    => "element_red_square.png",
-                Color::Green  => "element_green_square.png",
-                Color::Yellow => "element_yellow_square.png",
+                Color::Blue   => "blue",
+                Color::Red    => "red",
+                Color::Green  => "green",
+                Color::Yellow => "yellow",
             }
+        };
+
+        name.to_string() + &self.borders.to_texture_suffix() + ".png"
+    }
+
+}
+
+impl Sides {
+    pub fn to_texture_suffix(&self) -> &'static str {
+        match self {
+            &SIDE_ALL          => { "" },
+            &SIDE_BOTTOM_LEFT  => { "_bl" },
+            &SIDE_BOTTOM_RIGHT => { "_br" },
+            &SIDE_TOP_LEFT     => { "_tl" },
+            &SIDE_TOP_RIGHT    => { "_tr" },
+            &SIDE_BOTTOM       => { "_b" },
+            &SIDE_TOP          => { "_t" },
+            &SIDE_LEFT         => { "_l" },
+            &SIDE_RIGHT        => { "_r" },
+            &SIDE_NONE         => { "_m" },
+            _ => { "" },
         }
     }
 
+    pub fn debug_char(&self) -> &'static str {
+        match self {
+            &SIDE_ALL          => { "X" },
+            &SIDE_BOTTOM_LEFT  => { "┗" },
+            &SIDE_BOTTOM_RIGHT => { "┛" },
+            &SIDE_TOP_LEFT     => { "┏" },
+            &SIDE_TOP_RIGHT    => { "┓" },
+            &SIDE_BOTTOM       => { "━" },
+            &SIDE_TOP          => { "━" },
+            &SIDE_LEFT         => { "┃" },
+            &SIDE_RIGHT        => { "┃" },
+            &SIDE_NONE         => { " " },
+            _ => { "" },
+        }
+    }
+
+    // Execute all the code paths to shut up warnings.
+    // FIX: https://github.com/rust-lang/rust/issues/24580
+    #[allow(dead_code)]
+    fn _dead_code(&mut self) {
+        self.is_all();
+        self.is_empty();
+        self.bits();
+        self.intersects(*self);
+        self.remove(SIDE_RIGHT);
+        self.toggle(SIDE_RIGHT);
+        Sides::from_bits(0b00000000);
+        Sides::from_bits_truncate(0b00000000);
+    }
 }
 
 impl PartialEq for Block {
@@ -158,6 +237,15 @@ impl Direction {
             Direction::Right => Direction::Up,
             Direction::Down  => Direction::Right,
             Direction::Left  => Direction::Down,
+        }
+    }
+
+    pub fn to_side(&self) -> Sides {
+        match *self {
+            Direction::Up    => SIDE_TOP,
+            Direction::Right => SIDE_RIGHT,
+            Direction::Down  => SIDE_BOTTOM,
+            Direction::Left  => SIDE_LEFT,
         }
     }
 }
@@ -255,7 +343,25 @@ impl PositionedBlock {
     pub fn block(&self) -> Block { self.block }
     pub fn position(&self) -> GridPosition { self.position }
     pub fn color(&self) -> Color { self.block.color }
+    pub fn borders(&self) -> Sides { self.block.borders }
     pub fn breaker(&self) -> bool { self.block.breaker() }
+    pub fn is_fused(&self) -> bool { self.block.is_fused() }
+    pub fn debug_char(&self) -> String { self.block.debug_char() }
+    pub fn fuse(&self, borders: Sides) -> Self {
+        let block = Block {
+            borders: borders,
+            ..self.block
+        };
+
+        PositionedBlock {
+            block: block,
+            ..*self
+        }
+    }
+
+    pub fn can_fuse_with(&self, other: PositionedBlock) -> bool {
+        self.color() == other.color() && !self.breaker() && !other.breaker()
+    }
 
     pub fn offset(&self, direction: Direction) -> Self {
         let position = self.position.offset(direction);

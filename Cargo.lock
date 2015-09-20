@@ -1,10 +1,12 @@
 [root]
-name = "rust-puzzlefighter"
+name = "puzzlefighter"
 version = "0.1.0"
 dependencies = [
+ "bitflags 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "find_folder 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "gfx 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "gfx_device_gl 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lodepng 0.5.0 (git+https://github.com/pornel/lodepng-rust.git)",
  "piston-ai_behavior 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "piston-gfx_texture 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "piston2d-graphics 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -42,6 +44,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "byteorder"
 version = "0.3.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "c_vec"
+version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -363,6 +370,15 @@ dependencies = [
  "gcc 0.3.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "pkg-config 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "lodepng"
+version = "0.5.0"
+source = "git+https://github.com/pornel/lodepng-rust.git#759a884a785c13fa121806f94291aab643108ba4"
+dependencies = [
+ "c_vec 1.0.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

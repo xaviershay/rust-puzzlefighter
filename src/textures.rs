@@ -6,40 +6,43 @@ extern crate gfx_texture;
 
 use std::rc::Rc;
 use std::collections::HashMap;
+use std::fs;
 
 use gfx_texture::{Texture,TextureSettings,Flip};
 
 pub struct Textures<R> where R: gfx::Resources {
-    textures: HashMap<&'static str, Rc<Texture<R>>>,
+    textures: HashMap<String, Rc<Texture<R>>>,
 }
 
 impl Textures<gfx_device_gl::Resources> {
     pub fn new(window: &piston_window::PistonWindow) -> Self {
         let assets = find_folder::Search::ParentsThenKids(3, 3)
-            .for_folder("assets").unwrap();
+            .for_folder("assets").ok()
+            .expect("No assets/ directory found");
 
-        // TODO: Don't hardcode these.
-        let block_sprites = vec![
-            "element_blue_square.png",
-            "element_red_square.png",
-            "element_green_square.png",
-            "element_yellow_square.png",
-            "element_blue_polygon.png",
-            "element_red_polygon.png",
-            "element_green_polygon.png",
-            "element_yellow_polygon.png",
-        ];
+        let paths = fs::read_dir(assets).ok()
+            .expect("Could not list contents of assets dir");
+
         let mut store = HashMap::new();
 
-        for filename in block_sprites {
-            let texture = Rc::new(Texture::from_path(
-                &mut *window.factory.borrow_mut(),
-                assets.join(filename),
-                Flip::None,
-                &TextureSettings::new()
-            ).unwrap());
+        // TODO: Do this off-thread or otherwise as part of a loading routine.
+        // Currently shows an ugly white screen while it loads.
+        for filename in paths {
+            let filename = filename.unwrap();
+            if let Some(ext) = filename.path().extension() {
+                if ext == "png" {
+                    let texture = Texture::from_path(
+                            &mut *window.factory.borrow_mut(),
+                            filename.path(),
+                            Flip::None,
+                            &TextureSettings::new()
+                        )
+                        .ok()
+                        .expect(&format!("Could not load texture: {}", filename.path().display()));
 
-            store.insert(filename, texture);
+                    store.insert(filename.path().file_name().unwrap().to_str().unwrap().to_string(), Rc::new(texture));
+                }
+            }
         }
 
         Textures {
@@ -49,8 +52,10 @@ impl Textures<gfx_device_gl::Resources> {
 }
 
 impl<R: gfx::Resources> Textures<R> {
-    pub fn get(&self, key: &str) -> Rc<Texture<R>> {
-        self.textures.get(&key).unwrap().clone()
+    pub fn get(&self, key: String) -> Rc<Texture<R>> {
+        self.textures.get(&key)
+            .expect(&format!("No texture exists for {}", key))
+            .clone()
     }
 }
 
