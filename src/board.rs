@@ -2,6 +2,8 @@ use values::*;
 use renderer::*;
 use block_grid::*;
 
+use std::collections::LinkedList;
+
 use std::rc::Rc;
 
 use piston_window::*;
@@ -11,6 +13,40 @@ enum Phase {
     PieceFalling,
     Settling,
     Breaking(f64),
+}
+
+type StrikePattern = Vec<Color>;
+
+struct Attack {
+    strike_pattern: StrikePattern,
+    sprinkles: u32,
+}
+
+impl Attack {
+    fn sprinkles(strike_pattern: StrikePattern, size: u32) -> Self {
+        Attack {
+            strike_pattern: strike_pattern,
+            sprinkles: size,
+        }
+    }
+
+    fn apply(&self, dimensions: Dimension) -> LinkedList<PositionedBlock> {
+        let mut attack = LinkedList::new();
+
+        for i in 0..self.sprinkles {
+            let ref pattern = self.strike_pattern;
+            let color = pattern[i as usize % pattern.len()];
+            let block = Block::new(color, false);
+            let position = GridPosition::new(
+                (i % dimensions.w()) as i8,
+                (i / dimensions.w() + dimensions.h()) as i8);
+
+            let pb = PositionedBlock::new(block, position);
+            attack.push_back(pb);
+        }
+
+        attack
+    }
 }
 
 pub struct Board {
@@ -24,7 +60,7 @@ pub struct Board {
     next_renderer: Box<BlockRenderer>,
 
     // Count of pending sprinkles
-    sprinkles: u32,
+    attacks: LinkedList<Attack>,
 
     // Time since last block step.
     step_accumulator: f64,
@@ -54,7 +90,7 @@ impl Board {
             step_accumulator: 0.0,
             speed: SLOW_SPEED,
             current_piece: None,
-            sprinkles: 0,
+            attacks: LinkedList::new(),
             phase: Phase::NewPiece,
 
             grid: BlockGrid::new(dimensions),
@@ -64,7 +100,12 @@ impl Board {
     }
 
     pub fn attack(&mut self, strength: u32) {
-        self.sprinkles += strength;
+        // basic foil/chunli pattern
+        let strikes = vec!(
+            Color::Red, Color::Red, Color::Green, Color::Green, Color::Blue, Color::Blue
+        );
+
+        self.attacks.push_back(Attack::sprinkles(strikes, strength));
     }
 
     pub fn update(&mut self, event: &PistonWindow, enemy: &mut Board) {
@@ -72,24 +113,17 @@ impl Board {
             match self.phase {
                 // TODO: Is a noop phase really a phase? Probably not.
                 Phase::NewPiece => {
-                    // Dump sprinkles
-                    if self.sprinkles > 0 {
-                        for i in 0..self.sprinkles {
-                            let block = Block::new(Color::rand(), false);
-                            let position = GridPosition::new(
-                                (i % self.dimensions.w()) as i8,
-                                (i / self.dimensions.w() + self.dimensions.h()) as i8);
+                    // Apply attack
+                    if let Some(attack) = self.attacks.pop_front() {
+                        let blocks = attack.apply(self.dimensions);
 
-                            let pb = PositionedBlock::new(block, position);
+                        for pb in blocks {
                             self.grid_renderer.add_block(pb);
                             let resting = self.grid.bottom(pb);
                             self.grid.set(resting);
                             self.grid_renderer.drop_block(resting);
                         }
 
-                        // TODO: Prevent DoS, only allow one sprinkle drop per turn.
-                        // Switch to linked list at queue attacks.
-                        self.sprinkles = 0;
                         self.phase = Phase::Settling;
                     }
 
