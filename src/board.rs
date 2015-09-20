@@ -2,6 +2,8 @@ use values::*;
 use renderer::*;
 use block_grid::*;
 
+use std::collections::LinkedList;
+
 use std::rc::Rc;
 
 use piston_window::*;
@@ -9,8 +11,49 @@ use piston_window::*;
 enum Phase {
     NewPiece,
     PieceFalling,
-    Settling,
-    Breaking(f64),
+    Settling(u32),
+    Breaking(f64, u32),
+}
+
+type StrikePattern = Vec<Color>;
+
+struct Attack {
+    strike_pattern: StrikePattern,
+    sprinkles: u32,
+}
+
+impl Attack {
+    fn sprinkles(strike_pattern: StrikePattern, size: u32) -> Self {
+        Attack {
+            strike_pattern: strike_pattern,
+            sprinkles: size,
+        }
+    }
+
+    fn apply(&self, dimensions: Dimension, attack_from_left: bool) -> LinkedList<PositionedBlock> {
+        let mut attack = LinkedList::new();
+
+        for i in 0..self.sprinkles {
+            let ref pattern = self.strike_pattern;
+            let color = pattern[i as usize % pattern.len()];
+            let block = Block::new(color, false);
+            let x = i % dimensions.w();
+            let x = if attack_from_left {
+                x
+            } else {
+                dimensions.w() - x - 1
+            };
+
+            let position = GridPosition::new(
+                x as i8,
+                (i / dimensions.w() + dimensions.h()) as i8);
+
+            let pb = PositionedBlock::new(block, position);
+            attack.push_back(pb);
+        }
+
+        attack
+    }
 }
 
 pub struct Board {
@@ -23,18 +66,32 @@ pub struct Board {
     grid_renderer: Box<BlockRenderer>,
     next_renderer: Box<BlockRenderer>,
 
+    // Count of pending sprinkles
+    attacks: LinkedList<Attack>,
+
+    // Pending attack strength. Accumulates through combos then is dispatched
+    // in a single attack when board is settled.
+    strength: u32,
+
+    // Toggles each attack, alternate which sides sprinkles fall from.
+    attack_from_left: bool,
+
     // Time since last block step.
     step_accumulator: f64,
 
     // Seconds between block steps.
     speed: f64,
 
-    // Currently falling fiece
+    // Currently and next falling pieces
     current_piece: Option<Piece>,
+    next_piece: Option<Piece>,
 
     // Current update phase
     phase: Phase,
 }
+
+const SLOW_SPEED: f64 = 0.5;
+const TURBO_SPEED: f64 = 0.05;
 
 impl Board {
     pub fn new(render_settings: Rc<RenderSettings>,
@@ -42,31 +99,84 @@ impl Board {
                position: PixelPosition) -> Self {
 
         // TODO: Get cell dimension from renderer
-        Board {
+        let mut board = Board {
             dimensions: dimensions,
 
             step_accumulator: 0.0,
-            speed: 0.3,
+            speed: SLOW_SPEED,
             current_piece: None,
+            next_piece: None,
+            attacks: LinkedList::new(),
+            strength: 0,
+            attack_from_left: false,
             phase: Phase::NewPiece,
 
             grid: BlockGrid::new(dimensions),
             grid_renderer: render_settings.build(position.add(PixelPosition::new(16 + 32, 0)), dimensions),
             next_renderer: render_settings.build(position, Dimension::new(1, 2))
+        };
+        board.generate_next_piece();
+        board
+    }
+
+    pub fn attack(&mut self, strength: u32) {
+        if strength > 0 {
+            // basic foil/chunli pattern
+            let strikes = vec!(
+                Color::Red, Color::Red, Color::Green, Color::Green, Color::Blue, Color::Blue
+            );
+
+            self.attacks.push_back(Attack::sprinkles(strikes, strength));
         }
     }
 
-    pub fn update(&mut self, event: &PistonWindow) {
+    pub fn generate_next_piece(&mut self) {
+        if let Some(piece) = self.next_piece {
+            // Remove existing
+            for block in piece.blocks().iter() {
+                self.next_renderer.remove_block(*block);
+            }
+        }
+
+        // New random
+        let piece = Piece::rand(0, 0);
+        self.next_piece = Some(piece);
+
+        for block in piece.blocks().iter() {
+            self.next_renderer.add_block(*block);
+        }
+    }
+
+    pub fn update(&mut self, event: &PistonWindow, enemy: &mut Board) {
         event.update(|args| {
             match self.phase {
                 // TODO: Is a noop phase really a phase? Probably not.
                 Phase::NewPiece => {
-                    let piece = Piece::rand(2, self.dimensions.h() as i8 - 1);
-                    self.current_piece = Some(piece);
+                    // Apply attack
+                    if let Some(attack) = self.attacks.pop_front() {
+                        let blocks = attack.apply(self.dimensions, self.attack_from_left);
 
-                    for block in piece.blocks().iter() {
+                        for pb in blocks {
+                            self.grid_renderer.add_block(pb);
+                            let resting = self.grid.bottom(pb);
+                            self.grid.set(resting);
+                            self.grid_renderer.drop_block(resting);
+                        }
+
+                        self.attack_from_left = !self.attack_from_left;
+                        self.phase = Phase::Settling(0);
+                    }
+
+                    // Create new piece
+                    self.current_piece = Some(self.next_piece.unwrap().dup_to(
+                        GridPosition::new(3, self.dimensions.h() as i8),
+                        Direction::Up));
+
+                    for block in self.current_piece.unwrap().blocks().iter() {
                         self.grid_renderer.add_block(*block);
                     }
+
+                    self.generate_next_piece();
 
                     self.phase = Phase::PieceFalling;
                 },
@@ -84,31 +194,33 @@ impl Board {
                                     self.grid_renderer.drop_block(resting);
                                 }
                                 self.current_piece = None;
-                                self.phase = Phase::Settling;
+                                self.phase = Phase::Settling(0);
                             }
                         }
                     }
                 },
-                Phase::Settling => {
+                Phase::Settling(combo_depth) => {
                     let settled = self.grid.blocks().iter().all(|block| {
                         !self.grid_renderer.is_animating(*block)
                     });
 
                     if settled {
-                        let break_depth = self.break_blocks() as f64;
+                        let break_depth = self.break_blocks(combo_depth) as f64;
 
                         if break_depth > 0.0 {
-                            self.phase = Phase::Breaking(break_depth * 0.05);
+                            self.phase = Phase::Breaking(break_depth * 0.05, combo_depth + 1);
                         } else {
+                            enemy.attack(self.strength);
+                            self.strength = 0;
                             self.phase = Phase::NewPiece;
                         }
                     }
                 },
-                Phase::Breaking(dt) => {
+                Phase::Breaking(dt, combo_depth) => {
                     let dt = dt - args.dt;
 
                     if dt > 0.0 {
-                        self.phase = Phase::Breaking(dt);
+                        self.phase = Phase::Breaking(dt, combo_depth);
                     } else {
                         for block in self.grid.blocks() {
                             let bottom = self.grid.bottom(block);
@@ -119,7 +231,7 @@ impl Board {
                                 self.grid_renderer.drop_block(bottom);
                             }
                         }
-                        self.phase = Phase::Settling
+                        self.phase = Phase::Settling(combo_depth)
                     }
                 }
             }
@@ -155,21 +267,29 @@ impl Board {
         false
     }
 
-    fn break_blocks(&mut self) -> u8 {
+    fn break_blocks(&mut self, combo_depth: u32) -> u8 {
         let break_list = self.grid.find_breakers();
 
         if break_list.is_empty() {
             0
         } else {
             let mut highest_depth = 0;
+            let mut non_breakers = 0;
+
             for (block, depth) in &break_list {
                 self.grid.clear(block.position());
                 self.grid_renderer.explode_block(*block, *depth);
+
+                if !block.breaker() {
+                    non_breakers += 1;
+                }
 
                 if *depth > highest_depth {
                     highest_depth = *depth;
                 }
             }
+
+            self.strength += non_breakers / 2 * (combo_depth + 1);
 
             highest_depth
         }
@@ -177,12 +297,12 @@ impl Board {
 
     pub fn turbo(&mut self, enable: bool) {
         if enable {
-            self.speed = 0.05;
-            if self.step_accumulator > 0.05 {
-                self.step_accumulator = 0.05;
+            self.speed = TURBO_SPEED;
+            if self.step_accumulator > TURBO_SPEED {
+                self.step_accumulator = TURBO_SPEED;
             }
         } else {
-            self.speed = 0.3;
+            self.speed = SLOW_SPEED;
         }
     }
 }
