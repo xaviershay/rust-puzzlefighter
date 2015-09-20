@@ -182,7 +182,15 @@ impl Piece {
         Piece {
             blocks: [block1, block2],
             position: pos,
-            direction: Direction::Right,
+            direction: Direction::Up,
+        }
+    }
+
+    pub fn dup_to(&self, position: GridPosition, direction: Direction) -> Self {
+        Piece {
+            blocks: self.blocks,
+            position: position,
+            direction: direction,
         }
     }
 

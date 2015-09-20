@@ -68,8 +68,9 @@ pub struct Board {
     // Seconds between block steps.
     speed: f64,
 
-    // Currently falling fiece
+    // Currently and next falling pieces
     current_piece: Option<Piece>,
+    next_piece: Option<Piece>,
 
     // Current update phase
     phase: Phase,
@@ -84,19 +85,22 @@ impl Board {
                position: PixelPosition) -> Self {
 
         // TODO: Get cell dimension from renderer
-        Board {
+        let mut board = Board {
             dimensions: dimensions,
 
             step_accumulator: 0.0,
             speed: SLOW_SPEED,
             current_piece: None,
+            next_piece: None,
             attacks: LinkedList::new(),
             phase: Phase::NewPiece,
 
             grid: BlockGrid::new(dimensions),
             grid_renderer: render_settings.build(position.add(PixelPosition::new(16 + 32, 0)), dimensions),
             next_renderer: render_settings.build(position, Dimension::new(1, 2))
-        }
+        };
+        board.generate_next_piece();
+        board
     }
 
     pub fn attack(&mut self, strength: u32) {
@@ -106,6 +110,23 @@ impl Board {
         );
 
         self.attacks.push_back(Attack::sprinkles(strikes, strength));
+    }
+
+    pub fn generate_next_piece(&mut self) {
+        if let Some(piece) = self.next_piece {
+            // Remove existing
+            for block in piece.blocks().iter() {
+                self.next_renderer.remove_block(*block);
+            }
+        }
+
+        // New random
+        let piece = Piece::rand(0, 0);
+        self.next_piece = Some(piece);
+
+        for block in piece.blocks().iter() {
+            self.next_renderer.add_block(*block);
+        }
     }
 
     pub fn update(&mut self, event: &PistonWindow, enemy: &mut Board) {
@@ -128,12 +149,15 @@ impl Board {
                     }
 
                     // Create new piece
-                    let piece = Piece::rand(2, self.dimensions.h() as i8);
-                    self.current_piece = Some(piece);
+                    self.current_piece = Some(self.next_piece.unwrap().dup_to(
+                        GridPosition::new(3, self.dimensions.h() as i8),
+                        Direction::Up));
 
-                    for block in piece.blocks().iter() {
+                    for block in self.current_piece.unwrap().blocks().iter() {
                         self.grid_renderer.add_block(*block);
                     }
+
+                    self.generate_next_piece();
 
                     self.phase = Phase::PieceFalling;
                 },

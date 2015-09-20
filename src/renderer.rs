@@ -97,6 +97,7 @@ pub trait BlockRenderer {
     fn add_block(&mut self,  _block: PositionedBlock) {}
     fn move_block(&mut self, _block: PositionedBlock) {}
     fn drop_block(&mut self, _block: PositionedBlock) {}
+    fn remove_block(&mut self, _block: PositionedBlock) {}
     fn explode_block(&mut self, _block: PositionedBlock, _depth: u8) {}
     fn is_animating(&self, block: PositionedBlock) -> bool;
 }
@@ -129,6 +130,17 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
             MoveTo(0.2, self.scale_x(block.x()), self.scale_y(block.y()))
         )));
         self.scene.run(*sprite, &action);
+    }
+
+    fn remove_block(&mut self, block: PositionedBlock) {
+        {
+            let sprite = self.sprites.get(&block.block()).unwrap();
+
+            // Remove and add to bring to foreground
+            self.scene.remove_child(*sprite);
+        }
+
+        self.sprites.remove(&block.block());
     }
 
     fn explode_block(&mut self, block: PositionedBlock, depth: u8) {
