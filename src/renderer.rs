@@ -8,6 +8,8 @@ extern crate rand;
 extern crate sprite;
 extern crate ai_behavior;
 
+use std::rc::Rc;
+
 use self::uuid::Uuid;
 use self::piston_window::*;
 use self::sprite::*;
@@ -23,16 +25,17 @@ use std::collections::HashMap;
 use values::*;
 use textures::Textures;
 
-// TODO: De-dup with main.rs
-const CELL_WIDTH: f64 = 32.0;
-const CELL_HEIGHT: f64 = 32.0;
-const GRID_HEIGHT: u8 = 13;
-const GRID_WIDTH: u8 = 6;
-
 pub struct Renderer<I: ImageSize, R> where R: gfx::Resources {
     scene: Scene<I>,
-    textures: Textures<R>,
+    textures: Rc<Textures<R>>,
     sprites: HashMap<Block, Uuid>,
+    position: PixelPosition,
+    dimensions: Dimension,
+    cell_dimensions: Dimension,
+}
+
+pub struct GlRenderSettings<R: gfx::Resources> {
+    textures: Rc<Textures<R>>,
 }
 
 macro_rules! delayed_animation {
@@ -41,13 +44,51 @@ macro_rules! delayed_animation {
     }
 }
 
-impl<I: ImageSize, R> Renderer<I, R> where R: gfx::Resources {
+impl<R> GlRenderSettings<R> where R: gfx::Resources {
     pub fn new(textures: Textures<R>) -> Self {
+        GlRenderSettings {
+            textures: Rc::new(textures),
+        }
+    }
+}
+
+
+impl<I: ImageSize, R> Renderer<I, R> where R: gfx::Resources {
+    pub fn new(textures: Rc<Textures<R>>, position: PixelPosition, dimensions: Dimension, cell_dimensions: Dimension) -> Self {
         Renderer {
             textures: textures,
             sprites: HashMap::new(),
             scene: Scene::new(),
+            position: position,
+            dimensions: dimensions,
+            cell_dimensions: cell_dimensions,
         }
+    }
+
+    fn scale_x(&self, x: i8) -> f64 {
+        let cell_w = self.cell_dimensions.w() as f64;
+
+        x as f64 * cell_w + cell_w / 2.0
+    }
+
+    fn scale_y(&self, y: i8) -> f64 {
+        let cell_h = self.cell_dimensions.h() as f64;
+        let grid_h = self.dimensions.h();
+
+        (grid_h as i8 - y - 1) as f64 * cell_h + cell_h / 2.0
+    }
+}
+
+pub trait RenderSettings {
+    fn build(&self, _position: PixelPosition, _dimensions: Dimension) -> Box<BlockRenderer>;
+}
+
+impl RenderSettings for GlRenderSettings<gfx_device_gl::Resources> {
+    fn build(&self, position: PixelPosition, dimensions: Dimension) -> Box<BlockRenderer> {
+        let texture = self.textures.get("element_blue_square.png");
+        let cell_dimensions = Dimension::from_tuple(texture.get_size());
+
+        Box::new(Renderer::new(self.textures.clone(), position, dimensions, cell_dimensions)) as Box<BlockRenderer>
     }
 }
 
@@ -66,14 +107,10 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
         let sprite = Sprite::from_texture(texture);
 
         let id = self.scene.add_child(sprite);
-        self.scene.run(id,
-            &Action(
-                MoveTo(0.00,
-                    block.x() as f64 * CELL_WIDTH + CELL_WIDTH / 2.0,
-                    (GRID_HEIGHT as i8 - block.y() - 1) as f64 * CELL_HEIGHT + CELL_HEIGHT / 2.0
-                )
-            )
+        let action = Action(
+            MoveTo(0.00, self.scale_x(block.x()), self.scale_y(block.y()))
         );
+        self.scene.run(id, &action);
         self.sprites.insert(block.block(), id);
     }
 
@@ -81,28 +118,20 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
         let sprite = self.sprites.get(&block.block()).unwrap();
 
         self.scene.stop_all(*sprite);
-        self.scene.run(*sprite,
-            &Action(
-                MoveTo(0.01,
-                    block.x() as f64 * CELL_WIDTH + CELL_WIDTH / 2.0,
-                    (GRID_HEIGHT as i8 - block.y() - 1) as f64 * CELL_HEIGHT + CELL_HEIGHT / 2.0
-                )
-            )
+        let action = Action(
+            MoveTo(0.01, self.scale_x(block.x()), self.scale_y(block.y()))
         );
+        self.scene.run(*sprite, &action);
     }
 
     fn drop_block(&mut self, block: PositionedBlock) {
         let sprite = self.sprites.get(&block.block()).unwrap();
 
         self.scene.stop_all(*sprite);
-        self.scene.run(*sprite,
-            &Action(Ease(EaseFunction::QuadraticIn, Box::new(
-                MoveTo(0.2,
-                    block.x() as f64 * CELL_WIDTH + CELL_WIDTH / 2.0,
-                    (GRID_HEIGHT as i8 - block.y() - 1) as f64 * CELL_HEIGHT + CELL_HEIGHT / 2.0
-                )
-            )))
-        );
+        let action = Action(Ease(EaseFunction::QuadraticIn, Box::new(
+            MoveTo(0.2, self.scale_x(block.x()), self.scale_y(block.y()))
+        )));
+        self.scene.run(*sprite, &action);
     }
 
     fn explode_block(&mut self, block: PositionedBlock, depth: u8) {
@@ -150,16 +179,13 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
 
         self.scene.event(event);
         event.draw_2d(|c, g| {
-            // Black background
-            clear([0.0, 0.0, 0.0, 1.0], g);
-
             // Center board
-            let cam = &c.trans(50.0, 50.0);
+            let cam = &c.trans(self.position.x() as f64, self.position.y() as f64);
 
             // Board bounding box
             let dimensions = [0.0, 0.0,
-                CELL_WIDTH * GRID_WIDTH as f64,
-                CELL_HEIGHT * GRID_HEIGHT as f64
+                self.cell_dimensions.w() as f64 * self.dimensions.w() as f64,
+                self.cell_dimensions.h() as f64 * self.dimensions.h() as f64,
             ];
             Rectangle::new([0.2, 0.2, 0.2, 1.0])
                 .draw(dimensions, &cam.draw_state, cam.transform, g);

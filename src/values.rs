@@ -6,14 +6,58 @@ use self::uuid::Uuid;
 use std::hash::{Hash, Hasher};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Position {
+pub struct GridPosition {
     x: i8,
     y: i8,
 }
 
-impl Position {
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct PixelPosition {
+    x: u32,
+    y: u32,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Dimension {
+    w: u32,
+    h: u32,
+}
+
+impl Dimension {
+    pub fn new(w: u32, h: u32) -> Self {
+        Dimension {
+            w: w,
+            h: h,
+        }
+    }
+
+    pub fn from_tuple(tuple: (u32, u32)) -> Self {
+        Dimension::new(tuple.0, tuple.1)
+    }
+
+    pub fn w(&self) -> u32 { self.w }
+    pub fn h(&self) -> u32 { self.h }
+}
+
+impl PixelPosition {
+    pub fn new(x: u32, y: u32) -> Self {
+        PixelPosition {
+            x: x,
+            y: y,
+        }
+    }
+
+    pub fn x(&self) -> u32 { self.x }
+    pub fn y(&self) -> u32 { self.y }
+
+    pub fn add(&self, rhs: Self) -> Self {
+        PixelPosition::new(self.x() + rhs.x(), self.y() + rhs.y())
+    }
+}
+
+impl GridPosition {
     pub fn new(x: i8, y: i8) -> Self {
-        Position {
+        GridPosition {
             x: x,
             y: y,
         }
@@ -21,10 +65,10 @@ impl Position {
 
     pub fn offset(&self, direction: Direction) -> Self {
         match direction {
-            Direction::Up    => { Position { x: self.x, y: self.y + 1 }},
-            Direction::Down  => { Position { x: self.x, y: self.y - 1 }},
-            Direction::Left  => { Position { x: self.x - 1, y: self.y }},
-            Direction::Right => { Position { x: self.x + 1, y: self.y }},
+            Direction::Up    => { GridPosition { x: self.x, y: self.y + 1 }},
+            Direction::Down  => { GridPosition { x: self.x, y: self.y - 1 }},
+            Direction::Left  => { GridPosition { x: self.x - 1, y: self.y }},
+            Direction::Right => { GridPosition { x: self.x + 1, y: self.y }},
         }
     }
 
@@ -123,7 +167,7 @@ pub struct Piece {
     // TODO: These shouldn't be public
     pub blocks: [Block; 2],
     pub direction: Direction,
-    pub position: Position,
+    pub position: GridPosition,
 }
 
 impl Piece {
@@ -131,7 +175,7 @@ impl Piece {
         use self::rand::*;
 
         let mut rng = thread_rng();
-        let pos = Position::new(x, y);
+        let pos = GridPosition::new(x, y);
         let block1 = Block::new(Color::rand(), rng.gen_weighted_bool(4));
         let block2 = Block::new(Color::rand(), rng.gen_weighted_bool(4));
 
@@ -187,11 +231,11 @@ impl Piece {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PositionedBlock {
     block: Block,
-    position: Position,
+    position: GridPosition,
 }
 
 impl PositionedBlock {
-    pub fn new(block: Block, position: Position) -> Self {
+    pub fn new(block: Block, position: GridPosition) -> Self {
         PositionedBlock {
             block: block,
             position: position,
@@ -201,7 +245,7 @@ impl PositionedBlock {
     pub fn x(&self) -> i8 { self.position.x() }
     pub fn y(&self) -> i8 { self.position.y() }
     pub fn block(&self) -> Block { self.block }
-    pub fn position(&self) -> Position { self.position }
+    pub fn position(&self) -> GridPosition { self.position }
     pub fn color(&self) -> Color { self.block.color }
     pub fn breaker(&self) -> bool { self.block.breaker() }
 

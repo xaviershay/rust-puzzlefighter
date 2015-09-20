@@ -1,4 +1,4 @@
-use values::{PositionedBlock,Direction,Position};
+use values::*;
 use std::collections::{LinkedList,HashMap};
 
 pub struct BlockGrid {
@@ -6,7 +6,10 @@ pub struct BlockGrid {
 }
 
 impl BlockGrid {
-    pub fn new(width: usize, height: usize) -> BlockGrid {
+    pub fn new(dimensions: Dimension) -> BlockGrid {
+        let width = dimensions.w() as usize;
+        let height = dimensions.h() as usize;
+
         let mut rows = Vec::with_capacity(height);
         for _ in 0..height {
             let mut row = Vec::with_capacity(width);
@@ -23,7 +26,7 @@ impl BlockGrid {
         self.cells[block.y() as usize()][block.x() as usize()] = Some(block);
     }
 
-    pub fn clear(&mut self, position: Position) -> Option<PositionedBlock> {
+    pub fn clear(&mut self, position: GridPosition) -> Option<PositionedBlock> {
         let existing = self.at(position);
         self.cells[position.y() as usize()][position.x() as usize()] = None;
         existing
@@ -38,7 +41,7 @@ impl BlockGrid {
         false
     }
 
-    pub fn at(&self, position: Position) -> Option<PositionedBlock> {
+    pub fn at(&self, position: GridPosition) -> Option<PositionedBlock> {
         if let Some(row) = self.cells.get(position.y() as usize) {
             if let Some(cell) = row.get(position.x() as usize) {
                 return *cell;
