@@ -13,7 +13,7 @@ extern crate gfx;
 extern crate gfx_texture;
 
 use piston_window::*;
-use std::rc::Rc;
+use std::rc::*;
 
 use textures::Textures;
 use values::*;
@@ -86,8 +86,8 @@ fn main() {
 
         left_player.update(&e, &mut left_board);
         right_player.update(&e, &mut right_board);
-        left_board.update(&e);
-        right_board.update(&e);
+        left_board.update(&e, &mut right_board);
+        right_board.update(&e, &mut left_board);
 
         // TODO: lol do clipping properly
         e.draw_2d(|c, g| {

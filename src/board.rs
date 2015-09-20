@@ -23,6 +23,9 @@ pub struct Board {
     grid_renderer: Box<BlockRenderer>,
     next_renderer: Box<BlockRenderer>,
 
+    // Count of pending sprinkles
+    sprinkles: u32,
+
     // Time since last block step.
     step_accumulator: f64,
 
@@ -51,6 +54,7 @@ impl Board {
             step_accumulator: 0.0,
             speed: SLOW_SPEED,
             current_piece: None,
+            sprinkles: 0,
             phase: Phase::NewPiece,
 
             grid: BlockGrid::new(dimensions),
@@ -59,13 +63,36 @@ impl Board {
         }
     }
 
-    pub fn update(&mut self, event: &PistonWindow) {
+    pub fn attack(&mut self, strength: u32) {
+        self.sprinkles += strength;
+    }
+
+    pub fn update(&mut self, event: &PistonWindow, enemy: &mut Board) {
         event.update(|args| {
             match self.phase {
                 // TODO: Is a noop phase really a phase? Probably not.
                 Phase::NewPiece => {
                     // Dump sprinkles
-                    //
+                    if self.sprinkles > 0 {
+                        for i in 0..self.sprinkles {
+                            let block = Block::new(Color::rand(), false);
+                            let position = GridPosition::new(
+                                (i % self.dimensions.w()) as i8,
+                                (i / self.dimensions.w() + self.dimensions.h()) as i8);
+
+                            let pb = PositionedBlock::new(block, position);
+                            self.grid_renderer.add_block(pb);
+                            let resting = self.grid.bottom(pb);
+                            self.grid.set(resting);
+                            self.grid_renderer.drop_block(resting);
+                        }
+
+                        // TODO: Prevent DoS, only allow one sprinkle drop per turn.
+                        // Switch to linked list at queue attacks.
+                        self.sprinkles = 0;
+                        self.phase = Phase::Settling;
+                    }
+
                     // Create new piece
                     let piece = Piece::rand(2, self.dimensions.h() as i8);
                     self.current_piece = Some(piece);
@@ -101,7 +128,7 @@ impl Board {
                     });
 
                     if settled {
-                        let break_depth = self.break_blocks() as f64;
+                        let break_depth = self.break_blocks(enemy) as f64;
 
                         if break_depth > 0.0 {
                             self.phase = Phase::Breaking(break_depth * 0.05);
@@ -161,7 +188,7 @@ impl Board {
         false
     }
 
-    fn break_blocks(&mut self) -> u8 {
+    fn break_blocks(&mut self, enemy: &mut Board) -> u8 {
         let break_list = self.grid.find_breakers();
 
         if break_list.is_empty() {
@@ -176,6 +203,8 @@ impl Board {
                     highest_depth = *depth;
                 }
             }
+
+            enemy.attack(break_list.len() as u32);
 
             highest_depth
         }

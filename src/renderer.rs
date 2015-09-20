@@ -104,13 +104,9 @@ pub trait BlockRenderer {
 impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> {
     fn add_block(&mut self, block: PositionedBlock) {
         let texture = self.textures.get(block.block().to_texture_name());
-        let sprite = Sprite::from_texture(texture);
-
+        let mut sprite = Sprite::from_texture(texture);
+        sprite.set_position(self.scale_x(block.x()), self.scale_y(block.y()));
         let id = self.scene.add_child(sprite);
-        let action = Action(
-            MoveTo(0.00, self.scale_x(block.x()), self.scale_y(block.y()))
-        );
-        self.scene.run(id, &action);
         self.sprites.insert(block.block(), id);
     }
 
@@ -127,6 +123,7 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
     fn drop_block(&mut self, block: PositionedBlock) {
         let sprite = self.sprites.get(&block.block()).unwrap();
 
+        // TODO: Scale time by how far the drop is.
         self.scene.stop_all(*sprite);
         let action = Action(Ease(EaseFunction::QuadraticIn, Box::new(
             MoveTo(0.2, self.scale_x(block.x()), self.scale_y(block.y()))
