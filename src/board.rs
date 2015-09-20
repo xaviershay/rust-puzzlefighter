@@ -11,8 +11,8 @@ use piston_window::*;
 enum Phase {
     NewPiece,
     PieceFalling,
-    Settling,
-    Breaking(f64),
+    Settling(u32),
+    Breaking(f64, u32),
 }
 
 type StrikePattern = Vec<Color>;
@@ -61,6 +61,9 @@ pub struct Board {
 
     // Count of pending sprinkles
     attacks: LinkedList<Attack>,
+    // Pending attack strength. Accumulates through combos then is dispatched
+    // in a single attack when board is settled.
+    strength: u32,
 
     // Time since last block step.
     step_accumulator: f64,
@@ -93,6 +96,7 @@ impl Board {
             current_piece: None,
             next_piece: None,
             attacks: LinkedList::new(),
+            strength: 0,
             phase: Phase::NewPiece,
 
             grid: BlockGrid::new(dimensions),
@@ -104,12 +108,14 @@ impl Board {
     }
 
     pub fn attack(&mut self, strength: u32) {
-        // basic foil/chunli pattern
-        let strikes = vec!(
-            Color::Red, Color::Red, Color::Green, Color::Green, Color::Blue, Color::Blue
-        );
+        if strength > 0 {
+            // basic foil/chunli pattern
+            let strikes = vec!(
+                Color::Red, Color::Red, Color::Green, Color::Green, Color::Blue, Color::Blue
+            );
 
-        self.attacks.push_back(Attack::sprinkles(strikes, strength));
+            self.attacks.push_back(Attack::sprinkles(strikes, strength));
+        }
     }
 
     pub fn generate_next_piece(&mut self) {
@@ -145,7 +151,7 @@ impl Board {
                             self.grid_renderer.drop_block(resting);
                         }
 
-                        self.phase = Phase::Settling;
+                        self.phase = Phase::Settling(0);
                     }
 
                     // Create new piece
@@ -175,31 +181,34 @@ impl Board {
                                     self.grid_renderer.drop_block(resting);
                                 }
                                 self.current_piece = None;
-                                self.phase = Phase::Settling;
+                                self.phase = Phase::Settling(0);
                             }
                         }
                     }
                 },
-                Phase::Settling => {
+                Phase::Settling(combo_depth) => {
                     let settled = self.grid.blocks().iter().all(|block| {
                         !self.grid_renderer.is_animating(*block)
                     });
 
                     if settled {
-                        let break_depth = self.break_blocks(enemy) as f64;
+                        let break_depth = self.break_blocks(enemy, combo_depth) as f64;
 
                         if break_depth > 0.0 {
-                            self.phase = Phase::Breaking(break_depth * 0.05);
+                            self.phase = Phase::Breaking(break_depth * 0.05, combo_depth + 1);
                         } else {
+
+                            enemy.attack(self.strength);
+                            self.strength = 0;
                             self.phase = Phase::NewPiece;
                         }
                     }
                 },
-                Phase::Breaking(dt) => {
+                Phase::Breaking(dt, combo_depth) => {
                     let dt = dt - args.dt;
 
                     if dt > 0.0 {
-                        self.phase = Phase::Breaking(dt);
+                        self.phase = Phase::Breaking(dt, combo_depth);
                     } else {
                         for block in self.grid.blocks() {
                             let bottom = self.grid.bottom(block);
@@ -210,7 +219,7 @@ impl Board {
                                 self.grid_renderer.drop_block(bottom);
                             }
                         }
-                        self.phase = Phase::Settling
+                        self.phase = Phase::Settling(combo_depth)
                     }
                 }
             }
@@ -246,23 +255,29 @@ impl Board {
         false
     }
 
-    fn break_blocks(&mut self, enemy: &mut Board) -> u8 {
+    fn break_blocks(&mut self, enemy: &mut Board, combo_depth: u32) -> u8 {
         let break_list = self.grid.find_breakers();
 
         if break_list.is_empty() {
             0
         } else {
             let mut highest_depth = 0;
+            let mut non_breakers = 0;
+
             for (block, depth) in &break_list {
                 self.grid.clear(block.position());
                 self.grid_renderer.explode_block(*block, *depth);
+
+                if !block.breaker() {
+                    non_breakers += 1;
+                }
 
                 if *depth > highest_depth {
                     highest_depth = *depth;
                 }
             }
 
-            enemy.attack(break_list.len() as u32);
+            self.strength += non_breakers / 2 * (combo_depth + 1);
 
             highest_depth
         }
