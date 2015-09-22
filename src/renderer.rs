@@ -207,7 +207,8 @@ impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl
                 self.cell_dimensions.w() as f64 * self.dimensions.w() as f64,
                 self.cell_dimensions.h() as f64 * self.dimensions.h() as f64,
             ];
-            Rectangle::new([0.2, 0.2, 0.2, 1.0])
+            //Rectangle::new([0.0, 0.0, 0.0, 0.6])
+            Rectangle::new([1.0, 1.0, 1.0, 0.2])
                 .draw(dimensions, &cam.draw_state, cam.transform, g);
 
             // Blocks

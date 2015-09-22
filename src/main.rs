@@ -80,7 +80,7 @@ fn main() {
     let right_player = HumanPlayer::new(false);
 
     for e in window {
-        e.draw_2d(|_c, g| {
+        e.draw_2d(|c, g| {
             use graphics::*;
 
             // Black background

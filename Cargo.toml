@@ -24,8 +24,8 @@ git = "https://github.com/xaviershay/sprite"
 branch = "issue-113"
 
 [[example]]
-name = "make_tiles"
-path = "examples/make_tiles.rs"
+name = "generate_tiles"
+path = "examples/generate_tiles.rs"
 
-[dev_dependencies.lodepng]
-git = "https://github.com/pornel/lodepng-rust.git"
+[dev_dependencies]
+tempdir = "0.3"
