@@ -1,4 +1,5 @@
-use board_asserts::*;
+use puzzlefighter::*;
+use {make_board,assert_fused,assert_not_fused};
 
 #[test]
 fn fuse_2x2() {

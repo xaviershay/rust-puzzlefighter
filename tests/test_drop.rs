@@ -1,7 +1,4 @@
-//#[macro_use]
-//mod board_asserts;
-
-use board_asserts::*;
+use {make_board,assert_block,assert_no_block};
 
 #[test]
 fn drop_to_bottom() {

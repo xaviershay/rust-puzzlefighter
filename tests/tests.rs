@@ -1,5 +1,6 @@
-pub use self::puzzlefighter::*;
+extern crate puzzlefighter;
 
+pub use self::puzzlefighter::*;
 pub use std::rc::*;
 
 pub struct FakeRenderSettings {
@@ -30,13 +31,21 @@ macro_rules! make_board {
             $(
                 temp_vec.push($x);
             )*
-            let fake_render_settings = FakeRenderSettings::new();
-            let mut board = Board::new(Rc::new(fake_render_settings), Dimension::new(10, temp_vec.len() as u32), PixelPosition::new(0, 0));
+            let mut board = make_board(temp_vec.len());
             board.add_blocks(temp_vec);
             board.fuse_blocks();
             board
         }
     };
+}
+
+pub fn make_board(height: usize) -> Board {
+    let fake_render_settings = FakeRenderSettings::new();
+
+    Board::new(
+        Rc::new(fake_render_settings),
+        Dimension::new(10, height as u32),
+        PixelPosition::new(0, 0))
 }
 
 pub fn assert_fused(board: &Board, x: i8, y: i8, sides: Sides) {
@@ -66,3 +75,5 @@ pub fn assert_no_block(board: &Board, x: i8, y: i8) {
     assert!(block.is_none(), "Block at ({}, {})", x, y);
 }
 
+mod test_drop;
+mod test_fuse;

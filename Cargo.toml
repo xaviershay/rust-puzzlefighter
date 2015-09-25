@@ -3,6 +3,9 @@ name = "puzzlefighter"
 version = "0.1.0"
 authors = ["Xavier Shay <xavier@rhnh.net>"]
 
+[[test]]
+name = "tests"
+
 [features]
 animation_test = []
 
