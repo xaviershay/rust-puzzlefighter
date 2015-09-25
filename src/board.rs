@@ -267,15 +267,7 @@ impl Board {
                     if dt > 0.0 {
                         self.phase = Phase::Breaking(dt, combo_depth);
                     } else {
-                        for block in self.grid.blocks() {
-                            let bottom = self.grid.bottom(block);
-
-                            if bottom.position() != block.position() {
-                                self.grid.set(bottom);
-                                self.grid.clear(block.position());
-                                self.grid_renderer.drop_block(bottom);
-                            }
-                        }
+                        self.drop_blocks();
                         self.phase = Phase::Settling(combo_depth)
                     }
                 }
@@ -285,6 +277,17 @@ impl Board {
         self.next_renderer.event(&event);
     }
 
+    pub fn drop_blocks(&mut self) {
+        for block in self.grid.blocks() {
+            let bottom = self.grid.bottom(block);
+
+            if bottom.position() != block.position() {
+                self.grid.set(bottom);
+                self.grid.clear(block.position());
+                self.grid_renderer.drop_block(bottom);
+            }
+        }
+    }
     // Scan the board looking for blocks that can be fused together. In
     // general, non-special blocks of 2x2 or more of the same color "fuse"
     // together to form a single larger "block" that is both aesthetically
