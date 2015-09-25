@@ -11,6 +11,9 @@ Play by cloning the repo and running:
 
     cargo run --release
 
+See [issues](https://github.com/xaviershay/rust-puzzlefighter/issues) for major
+remaining TODOs.
+
 ## Development
 
 The block assets are auto-generated using imagemagick's `convert` tool.
@@ -18,13 +21,3 @@ The block assets are auto-generated using imagemagick's `convert` tool.
     brew install imagemagick
 
     cargo run --example generate_tiles -- assets/src assets/gen
-
-### Major TODOs
-
-* Some kind of endgame.
-* Power blocks.
-* Gamepad input.
-* Different drop patterns.
-* Counter blocks.
-* Decent graphics.
-* Sound effects.
