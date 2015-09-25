@@ -133,6 +133,7 @@ impl BlockGrid {
         cell
     }
 
+    // Returns a list of blocks ordered left to right, bottom to top.
     pub fn blocks(&self) -> LinkedList<PositionedBlock> {
         let mut list = LinkedList::new();
 

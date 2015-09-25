@@ -277,17 +277,53 @@ impl Board {
         self.next_renderer.event(&event);
     }
 
+    // Scan the board looking for blocks that should be dropped down to a lower
+    // position. Assumes that blocks are iterated bottom-to-top, since lower
+    // blocks need to move out of the way for higher ones to drop into that
+    // space. The fused block logic further assumes left-to-right iteration.
+    //
+    // Assumes a well formed board (which, short of bugs, will always be true).
     pub fn drop_blocks(&mut self) {
-        for block in self.grid.blocks() {
-            let bottom = self.grid.bottom(block);
+        let mut fused_list = LinkedList::new();
+        let mut fused_depth = self.dimensions.h() as i8;
 
-            if bottom.position() != block.position() {
-                self.grid.set(bottom);
-                self.grid.clear(block.position());
-                self.grid_renderer.drop_block(bottom);
+        for block in self.grid.blocks() {
+            // If this block is part of a fuse, then accumulate the block
+            // rather than moving it immediately. We need to drop the block
+            // only as far as the bottom side that can move the least, so that
+            // it will "rest" on a shelf as needed.
+            if block.is_fused() && block.borders().intersects(SIDE_BOTTOM) {
+                use std::cmp;
+
+                let bottom = self.grid.bottom(block);
+                fused_depth = cmp::min(block.y() - bottom.y(), fused_depth);
+                fused_list.push_back(block);
+
+                // Only once the entire bottom side is accumulated do we drop
+                // them all.
+                if block.borders() == SIDE_BOTTOM_RIGHT {
+                    for block in fused_list.into_iter() {
+                        self.drop_block(block, block.drop(fused_depth));
+                    }
+
+                    fused_depth = self.dimensions.h() as i8;
+                    fused_list = LinkedList::new();
+                }
+            } else {
+                let bottom = self.grid.bottom(block);
+                self.drop_block(block, bottom);
             }
         }
     }
+
+    fn drop_block(&mut self, block: PositionedBlock, bottom: PositionedBlock) {
+        if bottom.position() != block.position() {
+            self.grid.clear(block.position());
+            self.grid.set(bottom);
+            self.grid_renderer.drop_block(bottom);
+        }
+    }
+
     // Scan the board looking for blocks that can be fused together. In
     // general, non-special blocks of 2x2 or more of the same color "fuse"
     // together to form a single larger "block" that is both aesthetically

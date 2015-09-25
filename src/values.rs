@@ -371,6 +371,14 @@ impl PositionedBlock {
             ..*self
         }
     }
+
+    pub fn drop(&self, height: i8) -> Self {
+        let mut result = *self;
+        for i in 0..height {
+            result = result.offset(Direction::Down);
+        }
+        result
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
