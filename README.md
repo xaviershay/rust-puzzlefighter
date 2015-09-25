@@ -21,3 +21,8 @@ The block assets are auto-generated using imagemagick's `convert` tool.
     brew install imagemagick
 
     cargo run --example generate_tiles -- assets/src assets/gen
+
+Some debug keys are enabled in non-release builds:
+
+    Q:   Load blocks from board.txt
+    1-4: Set next piece to a colored breaker

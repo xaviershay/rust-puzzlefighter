@@ -11,6 +11,8 @@ enum InputAction {
     Left,
     Right,
     Turbo,
+    DebugLoadBoard,
+    DebugBreaker(Color),
 }
 
 pub struct HumanPlayer {
@@ -33,6 +35,14 @@ impl HumanPlayer {
             inputs.insert(Button::Keyboard(Key::Left), InputAction::Left);
             inputs.insert(Button::Keyboard(Key::Right), InputAction::Right);
             inputs.insert(Button::Keyboard(Key::Space), InputAction::Turbo);
+        }
+
+        if cfg!(debug_assertions) {
+            inputs.insert(Button::Keyboard(Key::Q), InputAction::DebugLoadBoard);
+            inputs.insert(Button::Keyboard(Key::D1), InputAction::DebugBreaker(Color::Red));
+            inputs.insert(Button::Keyboard(Key::D2), InputAction::DebugBreaker(Color::Green));
+            inputs.insert(Button::Keyboard(Key::D3), InputAction::DebugBreaker(Color::Blue));
+            inputs.insert(Button::Keyboard(Key::D4), InputAction::DebugBreaker(Color::Yellow));
         }
 
         HumanPlayer {
@@ -70,6 +80,40 @@ impl HumanPlayer {
                 },
                 Some(&InputAction::Turbo) => {
                     board.turbo(true);
+                },
+                Some(&InputAction::DebugBreaker(color)) => {
+                    if cfg!(debug_assertions) {
+                        board.set_next_piece(Piece::new(
+                            Block::new(color, true),
+                            Block::new(color, true),
+                        ))
+                    }
+
+                },
+                Some(&InputAction::DebugLoadBoard) => {
+                    if cfg!(debug_assertions) {
+                        use std::io::{BufReader,BufRead};
+                        use std::fs::File;
+
+                        let f = File::open("board.txt");
+
+                        match f {
+                            Err(e) => {
+                                println!("Could not open file: {}", e);
+                            },
+                            Ok(f) => {
+                                let mut reader = BufReader::new(&f);
+                                let eol: &[_] = &['\n', '\r'];
+                                let lines: Vec<_> = reader.lines().map(|x| {
+                                    x.ok().unwrap()
+                                        .trim_right_matches(eol)
+                                        .to_string()
+                                }).collect();
+                                board.add_blocks(lines);
+                                board.fuse_blocks();
+                            }
+                        }
+                    }
                 }
                 None => {},
             }

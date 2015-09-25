@@ -24,12 +24,24 @@ impl RenderSettings for FakeRenderSettings {
     }
 }
 
+macro_rules! svec {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut temp_vec = Vec::new();
+            $(
+                temp_vec.push($x.to_string());
+            )*
+            temp_vec
+        }
+    }
+}
+
 macro_rules! make_board {
     ( $( $x:expr ),* ) => {
         {
             let mut temp_vec = Vec::new();
             $(
-                temp_vec.push($x);
+                temp_vec.push($x.to_string());
             )*
             let mut board = make_board(temp_vec.len());
             board.add_blocks(temp_vec);

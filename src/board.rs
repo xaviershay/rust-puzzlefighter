@@ -127,11 +127,11 @@ impl Board {
     // Helper method for testing. Provides a string syntax for specifying a
     // board. Capital first letter of color makes a block, lower case makes a
     // breaker.
-    pub fn add_blocks(&mut self, lines: Vec<&'static str>) {
+    pub fn add_blocks(&mut self, lines: Vec<String>) {
         let height = lines.len();
         for y in 0..height {
             let mut x = 0;
-            let line = lines[y];
+            let ref line = lines[y];
             for c in line.chars() {
                 let y = (height - y - 1) as i8;
                 let block = match c {
@@ -170,6 +170,21 @@ impl Board {
             );
 
             self.attacks.push_back(Attack::sprinkles(strikes, strength));
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    pub fn set_next_piece(&mut self, piece: Piece) {
+        if let Some(piece) = self.next_piece {
+            // Remove existing
+            for block in piece.blocks().iter() {
+                self.next_renderer.remove_block(*block);
+            }
+        }
+        self.next_piece = Some(piece);
+
+        for block in piece.blocks().iter() {
+            self.next_renderer.add_block(*block);
         }
     }
 

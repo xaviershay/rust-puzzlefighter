@@ -53,7 +53,7 @@ fn fuse_above_existing_2x2() {
         "YY"
     );
 
-    board.add_blocks(vec!(
+    board.add_blocks(svec!(
         "YY",
         "",
         ""
@@ -77,7 +77,7 @@ fn fuse_below_existing_2x2() {
         "  "
     );
 
-    board.add_blocks(vec!(
+    board.add_blocks(svec!(
         "  ",
         "  ",
         "YY"
@@ -99,7 +99,7 @@ fn fuse_to_right_of_2x2() {
         "YY"
     );
 
-    board.add_blocks(vec!(
+    board.add_blocks(svec!(
         "  Y",
         "  Y"
     ));
@@ -120,7 +120,7 @@ fn fuse_to_left_of_2x2() {
         " YY"
     );
 
-    board.add_blocks(vec!(
+    board.add_blocks(svec!(
         "Y  ",
         "Y  "
     ));
@@ -164,12 +164,12 @@ fn fuse_does_not_go_across_corners() {
         " YY"
     );
 
-    board.add_blocks(vec!(
+    board.add_blocks(svec!(
         "    ",
         "  YY",
         "  YY",
         "    ",
-        "    ",
+        "    "
     ));
     board.fuse_blocks();
 
@@ -217,7 +217,7 @@ fn fuse_on_top_of_existing_3x2() {
         "YYY"
     );
 
-    board.add_blocks(vec!(
+    board.add_blocks(svec!(
         "YYY",
         "",
         ""

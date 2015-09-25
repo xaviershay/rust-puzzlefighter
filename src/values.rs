@@ -259,6 +259,15 @@ pub struct Piece {
 }
 
 impl Piece {
+    #[cfg(debug_assertions)]
+    pub fn new(b1: Block, b2: Block) -> Self {
+        Piece {
+            blocks: [b1, b2],
+            position: GridPosition::new(0, 0),
+            direction: Direction::Up,
+        }
+    }
+
     pub fn rand(x: i8, y: i8) -> Self {
         use self::rand::*;
 
@@ -381,7 +390,7 @@ impl PositionedBlock {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Color {
     Blue,
     Red,
