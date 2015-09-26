@@ -102,7 +102,7 @@ pub trait BlockRenderer {
     fn drop_block(&mut self, _block: PositionedBlock) {}
     fn remove_block(&mut self, _block: PositionedBlock) {}
     fn explode_block(&mut self, _block: PositionedBlock, _depth: u8) {}
-    fn is_animating(&self, block: PositionedBlock) -> bool { false }
+    fn is_animating(&self, _block: PositionedBlock) -> bool { false }
 }
 
 impl BlockRenderer for Renderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> {

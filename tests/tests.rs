@@ -24,33 +24,6 @@ impl RenderSettings for FakeRenderSettings {
     }
 }
 
-macro_rules! svec {
-    ( $( $x:expr ),* ) => {
-        {
-            let mut temp_vec = Vec::new();
-            $(
-                temp_vec.push($x.to_string());
-            )*
-            temp_vec
-        }
-    }
-}
-
-macro_rules! make_board {
-    ( $( $x:expr ),* ) => {
-        {
-            let mut temp_vec = Vec::new();
-            $(
-                temp_vec.push($x.to_string());
-            )*
-            let mut board = make_board(temp_vec.len());
-            board.add_blocks(temp_vec);
-            board.fuse_blocks();
-            board
-        }
-    };
-}
-
 pub fn make_board(height: usize) -> Board {
     let fake_render_settings = FakeRenderSettings::new();
 
@@ -87,5 +60,33 @@ pub fn assert_no_block(board: &Board, x: i8, y: i8) {
     assert!(block.is_none(), "Block at ({}, {})", x, y);
 }
 
+macro_rules! svec {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut temp_vec = Vec::new();
+            $(
+                temp_vec.push($x.to_string());
+            )*
+            temp_vec
+        }
+    }
+}
+
+macro_rules! make_board {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut temp_vec = Vec::new();
+            $(
+                temp_vec.push($x.to_string());
+            )*
+            let mut board = make_board(temp_vec.len());
+            board.add_blocks(temp_vec);
+            board.fuse_blocks();
+            board
+        }
+    };
+}
+
 mod test_drop;
 mod test_fuse;
+mod test_debug;

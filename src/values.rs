@@ -355,7 +355,6 @@ impl PositionedBlock {
     pub fn borders(&self) -> Sides { self.block.borders }
     pub fn breaker(&self) -> bool { self.block.breaker() }
     pub fn is_fused(&self) -> bool { self.block.is_fused() }
-    pub fn debug_char(&self) -> String { self.block.debug_char() }
     pub fn fuse(&self, borders: Sides) -> Self {
         let block = Block {
             borders: borders,
@@ -383,11 +382,13 @@ impl PositionedBlock {
 
     pub fn drop(&self, height: i8) -> Self {
         let mut result = *self;
-        for i in 0..height {
+        for _ in 0..height {
             result = result.offset(Direction::Down);
         }
         result
     }
+
+    pub fn debug_char(&self) -> String { self.block.debug_char() }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]

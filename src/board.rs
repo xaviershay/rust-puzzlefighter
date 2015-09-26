@@ -124,6 +124,11 @@ impl Board {
         self.grid().debug();
     }
 
+    #[allow(dead_code)]
+    pub fn _dead_code(&self) {
+        self.debug()
+    }
+
     // Helper method for testing. Provides a string syntax for specifying a
     // board. Capital first letter of color makes a block, lower case makes a
     // breaker.
@@ -554,8 +559,8 @@ impl Board {
                     if block.borders().contains(SIDE_BOTTOM_LEFT) {
                         use std::cmp::min;
 
-                        let mut top_left     = self.grid.find_opposite_corner(block, Direction::Up);
-                        let mut bottom_right = self.grid.find_opposite_corner(block, Direction::Right);
+                        let top_left     = self.grid.find_opposite_corner(block, Direction::Up);
+                        let bottom_right = self.grid.find_opposite_corner(block, Direction::Right);
 
                         let w = bottom_right.x() - block.x() + 1;
                         let h = top_left.y() - block.y() + 1;

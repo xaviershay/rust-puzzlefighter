@@ -102,7 +102,7 @@ impl HumanPlayer {
                                 println!("Could not open file: {}", e);
                             },
                             Ok(f) => {
-                                let mut reader = BufReader::new(&f);
+                                let reader = BufReader::new(&f);
                                 let eol: &[_] = &['\n', '\r'];
                                 let lines: Vec<_> = reader.lines().map(|x| {
                                     x.ok().unwrap()

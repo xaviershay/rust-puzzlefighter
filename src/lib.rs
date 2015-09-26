@@ -2,12 +2,12 @@
 #[macro_use]
 extern crate bitflags;
 
-mod textures;
+pub mod textures;
 mod block_grid;
 mod values;
 mod renderer;
 mod board;
-mod human_player;
+pub mod human_player;
 
 pub use self::renderer::*;
 pub use self::board::*;
