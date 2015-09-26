@@ -3,34 +3,8 @@ extern crate puzzlefighter;
 pub use self::puzzlefighter::*;
 pub use std::rc::*;
 
-pub struct FakeRenderSettings {
-    _fake: bool,
-}
-
-impl FakeRenderSettings {
-    pub fn new() -> Self {
-        FakeRenderSettings {
-            _fake: true,
-        }
-    }
-}
-
-impl BlockRenderer for FakeRenderSettings {
-}
-
-impl RenderSettings for FakeRenderSettings {
-    fn build(&self, _position: PixelPosition, _dimensions: Dimension) -> Box<BlockRenderer> {
-        Box::new(FakeRenderSettings::new())
-    }
-}
-
 pub fn make_board(height: usize) -> Board {
-    let fake_render_settings = FakeRenderSettings::new();
-
-    Board::new(
-        Rc::new(fake_render_settings),
-        Dimension::new(10, height as u32),
-        PixelPosition::new(0, 0))
+    Board::new(Dimension::new(10, height as u32))
 }
 
 pub fn assert_fused(board: &Board, x: i8, y: i8, sides: Sides) {

@@ -12,6 +12,7 @@ enum InputAction {
     Right,
     Turbo,
     DebugLoadBoard,
+    DebugAttack,
     DebugBreaker(Color),
 }
 
@@ -43,6 +44,7 @@ impl HumanPlayer {
             inputs.insert(Button::Keyboard(Key::D2), InputAction::DebugBreaker(Color::Green));
             inputs.insert(Button::Keyboard(Key::D3), InputAction::DebugBreaker(Color::Blue));
             inputs.insert(Button::Keyboard(Key::D4), InputAction::DebugBreaker(Color::Yellow));
+            inputs.insert(Button::Keyboard(Key::D5), InputAction::DebugAttack);
         }
 
         HumanPlayer {
@@ -89,6 +91,11 @@ impl HumanPlayer {
                         ))
                     }
 
+                },
+                Some(&InputAction::DebugAttack) => {
+                    if cfg!(debug_assertions) {
+                        board.attack(6);
+                    }
                 },
                 Some(&InputAction::DebugLoadBoard) => {
                     if cfg!(debug_assertions) {

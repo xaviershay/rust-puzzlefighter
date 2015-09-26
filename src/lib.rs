@@ -5,11 +5,10 @@ extern crate bitflags;
 pub mod textures;
 mod block_grid;
 mod values;
-mod renderer;
 mod board;
+pub mod board_renderer;
 pub mod human_player;
 
-pub use self::renderer::*;
 pub use self::board::*;
 pub use self::values::*;
 pub use self::block_grid::*;

@@ -11,10 +11,10 @@ pub struct GridPosition {
     y: i8,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct PixelPosition {
-    x: u32,
-    y: u32,
+    x: f64,
+    y: f64,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -40,18 +40,18 @@ impl Dimension {
 }
 
 impl PixelPosition {
-    pub fn new(x: u32, y: u32) -> Self {
+    pub fn new(x: f64, y: f64) -> Self {
         PixelPosition {
             x: x,
             y: y,
         }
     }
 
-    pub fn x(&self) -> u32 { self.x }
-    pub fn y(&self) -> u32 { self.y }
+    pub fn x(&self) -> f64 { self.x }
+    pub fn y(&self) -> f64 { self.y }
 
-    pub fn add(&self, rhs: Self) -> Self {
-        PixelPosition::new(self.x() + rhs.x(), self.y() + rhs.y())
+    pub fn add(&self, other: Self) -> Self {
+        PixelPosition::new(self.x() + other.x(), self.y() + other.y())
     }
 }
 
@@ -334,6 +334,12 @@ impl Piece {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum BlockEvent {
+    Drop(PositionedBlock, PositionedBlock),
+    Explode(PositionedBlock, u32),
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PositionedBlock {
     block: Block,
     position: GridPosition,
@@ -355,6 +361,7 @@ impl PositionedBlock {
     pub fn borders(&self) -> Sides { self.block.borders }
     pub fn breaker(&self) -> bool { self.block.breaker() }
     pub fn is_fused(&self) -> bool { self.block.is_fused() }
+    pub fn to_texture_name(&self) -> String { self.block.to_texture_name() }
     pub fn fuse(&self, borders: Sides) -> Self {
         let block = Block {
             borders: borders,
@@ -381,11 +388,15 @@ impl PositionedBlock {
     }
 
     pub fn drop(&self, height: i8) -> Self {
-        let mut result = *self;
-        for _ in 0..height {
-            result = result.offset(Direction::Down);
+        if height > 0 {
+            let mut result = *self;
+            for _ in 0..height {
+                result = result.offset(Direction::Down);
+            }
+            result
+        } else {
+            *self
         }
-        result
     }
 
     pub fn debug_char(&self) -> String { self.block.debug_char() }

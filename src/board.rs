@@ -1,18 +1,13 @@
 use values::*;
-use renderer::*;
 use block_grid::*;
+use board_renderer::RenderState;
 
 use std::collections::LinkedList;
-
-use std::rc::Rc;
-
-use piston_window::*;
 
 enum Phase {
     NewPiece,
     PieceFalling,
     Settling(u32),
-    Breaking(f64, u32),
 }
 
 type StrikePattern = Vec<Color>;
@@ -63,8 +58,6 @@ pub struct Board {
     // Private
     // State
     grid: BlockGrid,
-    grid_renderer: Box<BlockRenderer>,
-    next_renderer: Box<BlockRenderer>,
 
     // Count of pending sprinkles
     attacks: LinkedList<Attack>,
@@ -88,17 +81,16 @@ pub struct Board {
 
     // Current update phase
     phase: Phase,
+
+    pub events: LinkedList<BlockEvent>,
 }
 
 const SLOW_SPEED: f64 = 0.5;
 const TURBO_SPEED: f64 = 0.05;
 
 impl Board {
-    pub fn new(render_settings: Rc<RenderSettings>,
-               dimensions: Dimension,
-               position: PixelPosition) -> Self {
+    pub fn new(dimensions: Dimension) -> Self {
 
-        // TODO: Get cell dimension from renderer
         let mut board = Board {
             dimensions: dimensions,
 
@@ -112,8 +104,7 @@ impl Board {
             phase: Phase::NewPiece,
 
             grid: BlockGrid::new(dimensions),
-            grid_renderer: render_settings.build(position.add(PixelPosition::new(16 + 32, 0)), dimensions),
-            next_renderer: render_settings.build(position, Dimension::new(1, 2))
+            events: LinkedList::new(),
         };
         board.generate_next_piece();
         board
@@ -123,6 +114,9 @@ impl Board {
     pub fn debug(&self) {
         self.grid().debug();
     }
+
+    pub fn next_piece(&self) -> Option<Piece> { self.next_piece }
+    pub fn current_piece(&self) -> Option<Piece> { self.current_piece }
 
     #[allow(dead_code)]
     pub fn _dead_code(&self) {
@@ -153,9 +147,7 @@ impl Board {
 
                 if let Some(block) = block {
                     let position = GridPosition::new(x, y);
-                    self.grid_renderer.add_block(
-                        self.grid.set(PositionedBlock::new(block, position))
-                    );
+                    self.grid.set(PositionedBlock::new(block, position));
                 }
                 x += 1
             }
@@ -180,121 +172,88 @@ impl Board {
 
     #[cfg(debug_assertions)]
     pub fn set_next_piece(&mut self, piece: Piece) {
-        if let Some(piece) = self.next_piece {
-            // Remove existing
-            for block in piece.blocks().iter() {
-                self.next_renderer.remove_block(*block);
-            }
-        }
         self.next_piece = Some(piece);
-
-        for block in piece.blocks().iter() {
-            self.next_renderer.add_block(*block);
-        }
     }
 
     pub fn generate_next_piece(&mut self) {
-        if let Some(piece) = self.next_piece {
-            // Remove existing
-            for block in piece.blocks().iter() {
-                self.next_renderer.remove_block(*block);
-            }
-        }
-
-        // New random
-        let piece = Piece::rand(0, 0);
-        self.next_piece = Some(piece);
-
-        for block in piece.blocks().iter() {
-            self.next_renderer.add_block(*block);
-        }
+        self.next_piece = Some(Piece::rand(0, 0));
     }
 
-    pub fn update(&mut self, event: &PistonWindow, enemy: &mut Board) {
-        event.update(|args| {
-            match self.phase {
-                // TODO: Is a noop phase really a phase? Probably not.
-                Phase::NewPiece => {
-                    // Apply attack
-                    if let Some(attack) = self.attacks.pop_front() {
-                        let blocks = attack.apply(self.dimensions, self.attack_from_left);
+    fn emit(&mut self, event: BlockEvent) {
+        self.events.push_back(event);
+    }
 
-                        for pb in blocks {
-                            self.grid_renderer.add_block(pb);
-                            let resting = self.grid.bottom(pb);
-                            self.grid.set(resting);
-                            self.grid_renderer.drop_block(resting);
-                        }
+    pub fn consume_events(&mut self) -> LinkedList<BlockEvent> {
+        let mut list = LinkedList::new();
+        list.append(&mut self.events);
+        list
+    }
 
-                        self.attack_from_left = !self.attack_from_left;
-                        self.phase = Phase::Settling(0);
+    pub fn update(&mut self, dt: f64, enemy: &mut Board, render_state: &RenderState) {
+        match self.phase {
+            // TODO: Is a noop phase really a phase? Probably not.
+            Phase::NewPiece => {
+                // Apply attack
+                if let Some(attack) = self.attacks.pop_front() {
+                    let blocks = attack.apply(self.dimensions, self.attack_from_left);
+
+                    for pb in blocks {
+                        let resting = self.grid.bottom(pb);
+                        self.grid.set(resting);
+                        self.emit(BlockEvent::Drop(pb, resting));
                     }
 
-                    // Create new piece
-                    self.current_piece = Some(self.next_piece.unwrap().dup_to(
-                        GridPosition::new(3, self.dimensions.h() as i8),
-                        Direction::Up));
+                    self.attack_from_left = !self.attack_from_left;
+                    self.phase = Phase::Settling(0);
+                }
 
-                    for block in self.current_piece.unwrap().blocks().iter() {
-                        self.grid_renderer.add_block(*block);
-                    }
+                // Create new piece
+                self.current_piece = Some(self.next_piece.unwrap().dup_to(
+                    GridPosition::new(3, self.dimensions.h() as i8),
+                    Direction::Up));
 
-                    self.generate_next_piece();
+                self.generate_next_piece();
 
-                    self.phase = Phase::PieceFalling;
-                },
-                Phase::PieceFalling => {
-                    self.step_accumulator += args.dt;
+                self.phase = Phase::PieceFalling;
+            },
+            Phase::PieceFalling => {
+                self.step_accumulator += dt;
 
-                    if self.step_accumulator > self.speed {
-                        self.step_accumulator -= self.speed;
+                if self.step_accumulator > self.speed {
+                    self.step_accumulator -= self.speed;
 
-                        if !self.move_piece(|current| current.offset(Direction::Down) ) {
-                            if let Some(piece) = self.current_piece {
-                                for pb in piece.blocks().iter() {
-                                    let resting = self.grid.bottom(*pb);
-                                    self.grid.set(resting);
-                                    self.grid_renderer.drop_block(resting);
-                                }
-                                self.current_piece = None;
-                                self.phase = Phase::Settling(0);
+                    if !self.move_piece(|current| current.offset(Direction::Down) ) {
+                        if let Some(piece) = self.current_piece {
+                            for pb in piece.blocks().iter() {
+                                let bottom = self.grid.bottom(*pb);
+                                let resting = pb.drop(pb.y() - bottom.y());
+                                self.grid.set(resting);
+                                self.emit(BlockEvent::Drop(*pb, resting));
                             }
+                            self.current_piece = None;
+                            self.phase = Phase::Settling(0);
                         }
                     }
-                },
-                Phase::Settling(combo_depth) => {
-                    let settled = self.grid.blocks().iter().all(|block| {
-                        !self.grid_renderer.is_animating(*block)
-                    });
-
-                    if settled {
+                }
+            },
+            Phase::Settling(combo_depth) => {
+                if render_state.is_settled() {
+                    if !self.drop_blocks() {
                         self.fuse_blocks();
 
                         let break_depth = self.break_blocks(combo_depth) as f64;
 
                         if break_depth > 0.0 {
-                            self.phase = Phase::Breaking(break_depth * 0.05, combo_depth + 1);
+                            self.phase = Phase::Settling(combo_depth + 1);
                         } else {
                             enemy.attack(self.strength);
                             self.strength = 0;
                             self.phase = Phase::NewPiece;
                         }
                     }
-                },
-                Phase::Breaking(dt, combo_depth) => {
-                    let dt = dt - args.dt;
-
-                    if dt > 0.0 {
-                        self.phase = Phase::Breaking(dt, combo_depth);
-                    } else {
-                        self.drop_blocks();
-                        self.phase = Phase::Settling(combo_depth)
-                    }
                 }
             }
-        });
-        self.grid_renderer.event(&event);
-        self.next_renderer.event(&event);
+        }
     }
 
     // Scan the board looking for blocks that should be dropped down to a lower
@@ -303,9 +262,10 @@ impl Board {
     // space. The fused block logic further assumes left-to-right iteration.
     //
     // Assumes a well formed board (which, short of bugs, will always be true).
-    pub fn drop_blocks(&mut self) {
+    pub fn drop_blocks(&mut self) -> bool {
         let mut fused_list = LinkedList::new();
         let mut fused_depth = self.dimensions.h() as i8;
+        let mut dropped = false;
 
         for block in self.grid.blocks() {
             // If this block is part of a fuse, then accumulate the block
@@ -323,7 +283,7 @@ impl Board {
                 // them all.
                 if block.borders() == SIDE_BOTTOM_RIGHT {
                     for block in fused_list.into_iter() {
-                        self.drop_block(block, block.drop(fused_depth));
+                        dropped |= self.drop_block(block, block.drop(fused_depth));
                     }
 
                     fused_depth = self.dimensions.h() as i8;
@@ -331,16 +291,20 @@ impl Board {
                 }
             } else {
                 let bottom = self.grid.bottom(block);
-                self.drop_block(block, bottom);
+                dropped |= self.drop_block(block, bottom);
             }
         }
+        dropped
     }
 
-    fn drop_block(&mut self, block: PositionedBlock, bottom: PositionedBlock) {
+    fn drop_block(&mut self, block: PositionedBlock, bottom: PositionedBlock) -> bool {
         if bottom.position() != block.position() {
             self.grid.clear(block.position());
             self.grid.set(bottom);
-            self.grid_renderer.drop_block(bottom);
+            self.emit(BlockEvent::Drop(block, bottom));
+            true
+        } else {
+            false
         }
     }
 
@@ -379,17 +343,10 @@ impl Board {
                     });
 
                     if fuse {
-                        let x = self.grid.set(block.fuse(SIDE_BOTTOM | SIDE_LEFT));
-                        self.grid_renderer.transition_block(x);
-
-                        let x = self.grid.set(up.fuse(SIDE_TOP | SIDE_LEFT));
-                        self.grid_renderer.transition_block(x);
-
-                        let x = self.grid.set(right.fuse(SIDE_BOTTOM | SIDE_RIGHT));
-                        self.grid_renderer.transition_block(x);
-
-                        let x = self.grid.set(upright.fuse(SIDE_TOP | SIDE_RIGHT));
-                        self.grid_renderer.transition_block(x);
+                        self.grid.set(block.fuse(SIDE_BOTTOM | SIDE_LEFT));
+                        self.grid.set(up.fuse(SIDE_TOP | SIDE_LEFT));
+                        self.grid.set(right.fuse(SIDE_BOTTOM | SIDE_RIGHT));
+                        self.grid.set(upright.fuse(SIDE_TOP | SIDE_RIGHT));
                     }
                 } else {
                     // All other fusing is done by "extending" existing fused
@@ -501,11 +458,8 @@ impl Board {
                 let alt_sides = alt_sides | sides;
 
 
-                let x = grid.set(alt.fuse(alt_sides));
-                self.grid_renderer.transition_block(x);
-
-                let x = grid.set(block.fuse(sides));
-                self.grid_renderer.transition_block(x);
+                grid.set(alt.fuse(alt_sides));
+                grid.set(block.fuse(sides));
 
                 if block.borders().contains(opposite_corner) {
                     // We found the opposite corner, so exit the loop.
@@ -535,9 +489,6 @@ impl Board {
             });
 
             if !occupied {
-                for pb in new_piece.blocks().iter() {
-                    self.grid_renderer.move_block(*pb);
-                }
                 self.current_piece = Some(new_piece);
                 return true;
             }
@@ -582,7 +533,7 @@ impl Board {
 
             for (block, depth) in &break_list {
                 self.grid.clear(block.position());
-                self.grid_renderer.explode_block(*block, *depth);
+                self.emit(BlockEvent::Explode(*block, *depth as u32));
 
                 if *depth > highest_depth {
                     highest_depth = *depth;

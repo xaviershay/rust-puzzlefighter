@@ -4,9 +4,9 @@ extern crate bitflags;
 mod textures;
 mod block_grid;
 mod values;
-mod renderer;
 mod board;
 mod human_player;
+mod board_renderer;
 
 extern crate piston_window;
 extern crate uuid;
@@ -20,64 +20,49 @@ use std::rc::*;
 
 use textures::Textures;
 use values::*;
-use renderer::*;
 use board::*;
 use human_player::*;
-
-//        if cfg!(feature = "animation_test") {
-//            let blocks = vec!(
-//                PositionedBlock::new(Block::new(Color::Red,   true), Position::new(0, 0)),
-//                PositionedBlock::new(Block::new(Color::Green, false), Position::new(0, 1)),
-//                PositionedBlock::new(Block::new(Color::Green, false), Position::new(0, 2)),
-//                PositionedBlock::new(Block::new(Color::Green, false), Position::new(0, 3)),
-//                PositionedBlock::new(Block::new(Color::Red,   false), Position::new(0, 4)),
-//                PositionedBlock::new(Block::new(Color::Red,   false), Position::new(0, 5)),
-//                PositionedBlock::new(Block::new(Color::Red,   false), Position::new(0, 6)),
-//                PositionedBlock::new(Block::new(Color::Red,   false), Position::new(0, 7)),
-//                PositionedBlock::new(Block::new(Color::Blue,  false), Position::new(0, 8)),
-//                PositionedBlock::new(Block::new(Color::Green, true), Position::new(1, 0)),
-//                PositionedBlock::new(Block::new(Color::Green, false), Position::new(1, 1)),
-//                PositionedBlock::new(Block::new(Color::Red,   false), Position::new(1, 2)),
-//                PositionedBlock::new(Block::new(Color::Blue,  false), Position::new(1, 3)),
-//                PositionedBlock::new(Block::new(Color::Red,   false), Position::new(1, 4)),
-//                PositionedBlock::new(Block::new(Color::Blue,  false), Position::new(1, 5)),
-//            );
-//            for block in blocks {
-//                grid.set(block);
-//                renderer.add_block(block);
-//            }
+use board_renderer::*;
 
 fn main() {
     // TODO: Get width + height from board
-    let margin = 16;
-    let gutter = 64;
-    let cell = 32;
+    let dimensions = Dimension::new(6, 13);
+    let margin = 16.0;
+    let gutter = 64.0;
+    let cell = 32.0;
 
-    let board_width = cell * (6 + 1) + margin;
+    let board_width = cell * (dimensions.w() + 1) as f64 + margin;
     let left_x = gutter;
     let right_x = gutter + board_width + gutter;
     let total_width = right_x + board_width + gutter;
-    let total_height = gutter * 2 + cell * 13;
+    let total_height = gutter * 2.0 + cell * dimensions.h() as f64;
 
     let window: PistonWindow =
-        WindowSettings::new("Puzzle Fighter Turbo II", (total_width, total_height))
+        WindowSettings::new("Puzzle Fighter Turbo II", (total_width as u32, total_height as u32))
         .exit_on_esc(true)
         .build()
         .unwrap();
 
-    let textures = Textures::new(&window);
-    let settings = Rc::new(GlRenderSettings::new(textures));
+    let mut left_board = Board::new(dimensions);
+    let mut right_board = Board::new(dimensions);
 
-    let mut left_board = Board::new(settings.clone(),
-                                    Dimension::new(6, 13),
-                                    PixelPosition::new(left_x, gutter));
-
-    let mut right_board = Board::new(settings.clone(),
-                                    Dimension::new(6, 13),
-                                    PixelPosition::new(right_x, gutter));
+    let textures = Rc::new(Textures::new(&window));
+    let mut left_board_renderer = BoardRenderer::new(
+        textures.clone(),
+        PixelPosition::new(left_x, gutter),
+        dimensions
+        );
+    let mut right_board_renderer = BoardRenderer::new(
+        textures.clone(),
+        PixelPosition::new(right_x, gutter),
+        dimensions
+        );
 
     let left_player = HumanPlayer::new(true);
     let right_player = HumanPlayer::new(false);
+
+    let mut left_render_state = RenderState::new();
+    let mut right_render_state = RenderState::new();
 
     for e in window {
         e.draw_2d(|_c, g| {
@@ -89,8 +74,22 @@ fn main() {
 
         left_player.update(&e, &mut left_board);
         right_player.update(&e, &mut right_board);
-        left_board.update(&e, &mut right_board);
-        right_board.update(&e, &mut left_board);
+
+        e.update(|args| {
+            left_board.update(args.dt, &mut right_board, &left_render_state);
+            right_board.update(args.dt, &mut left_board, &right_render_state);
+        });
+
+        // TODO: This return code pattern sucks
+        match right_board_renderer.render(&e, &mut right_board) {
+            Some(state) => { right_render_state = state },
+            None => {}
+        }
+        // TODO: This return code pattern sucks
+        match left_board_renderer.render(&e, &mut left_board) {
+            Some(state) => { left_render_state = state },
+            None => {}
+        }
 
         // TODO: lol do clipping properly
         e.draw_2d(|c, g| {
