@@ -63,8 +63,8 @@ fn main() {
         dimensions
         );
 
-    let left_player = HumanPlayer::new(true);
-    let right_player = HumanPlayer::new(false);
+    let mut left_player = HumanPlayer::new(true, 0);
+    let mut right_player = HumanPlayer::new(false, 1);
 
     let mut left_render_state = RenderState::new();
     let mut right_render_state = RenderState::new();
