@@ -51,6 +51,8 @@ impl Attack {
     }
 }
 
+const MAX_FLOOR_KICKS: u8 = 1;
+
 pub struct Board {
     // Public
     dimensions: Dimension,
@@ -170,13 +172,16 @@ impl Board {
         }
     }
 
-    #[cfg(debug_assertions)]
     pub fn set_next_piece(&mut self, piece: Piece) {
         self.next_piece = Some(piece);
     }
 
+    pub fn set_current_piece(&mut self, piece: Piece) {
+        self.current_piece = Some(piece);
+    }
+
     pub fn generate_next_piece(&mut self) {
-        self.next_piece = Some(Piece::rand(0, 0));
+        self.set_next_piece(Piece::rand(0, 0));
     }
 
     fn emit(&mut self, event: BlockEvent) {
@@ -208,10 +213,11 @@ impl Board {
                 }
 
                 // Create new piece
-                self.current_piece = Some(self.next_piece.unwrap().dup_to(
+                let piece = self.next_piece.unwrap().dup_to(
                     GridPosition::new(3, self.dimensions.h() as i8),
-                    Direction::Up));
+                    Direction::Up);
 
+                self.set_current_piece(piece);
                 self.generate_next_piece();
 
                 self.phase = Phase::PieceFalling;
@@ -388,8 +394,8 @@ impl Board {
         // If extruding up, the "extrude side" is up.
         let extrude_side    = extrude_direction.to_side();
         // If extruding up, the "fused sides" are left and right.
-        let fused_sides     = extrude_direction.clockwise().to_side() |
-                              extrude_direction.anti_clockwise().to_side();
+        let fused_sides     = extrude_direction.rotate(Rotation::Clockwise).to_side() |
+                              extrude_direction.rotate(Rotation::AntiClockwise).to_side();
         let opposite_corner = extrude_side | traverse_direction.to_side();
 
         let mut block = anchor;
@@ -472,24 +478,47 @@ impl Board {
         }
     }
 
-    // Attempt to modify the current piece if present. modifier will be called
-    // with the current piece and should return a desired modification. If it
-    // is valid (no blocks are in the way), the current piece is replaced with
-    // it and true is returned. Otherwise, returns false.
+    pub fn rotate(&mut self, r: Rotation) -> Option<Piece> {
+        let options: Vec<Box<Fn(Piece) -> Piece>> = vec!(
+            Box::new(|current| current.rotate(r)),
+            Box::new(|current| {
+                let shunt = current.direction.rotate(r.reverse());
+                current.rotate(r).offset(shunt).kick()
+            }),
+            Box::new(|current| {
+                let shunt = current.direction;
+                current.rotate(r).rotate(r).offset(shunt)
+            }),
+        );
+
+        for m in options {
+            let moved = self.move_piece(|current| (*m)(current));
+
+            if moved {
+                break;
+            }
+        }
+
+        self.current_piece
+    }
+
+    /// Attempt to modify the current piece if present. modifier will be called
+    /// with the current piece and should return a desired modification. If it
+    /// is valid (no blocks are in the way, not too many floor kicks), the
+    /// current piece is replaced with it and true is returned. Otherwise,
+    /// returns false.
     pub fn move_piece<F>(&mut self, modifier: F) -> bool
         where F : Fn(Piece) -> Piece {
-
-        let ref mut grid = self.grid;
 
         if let Some(piece) = self.current_piece {
             let new_piece = modifier(piece);
 
             let occupied = new_piece.blocks().iter().any(|pb| {
-                !grid.empty(*pb)
+                !self.grid.empty(*pb)
             });
 
-            if !occupied {
-                self.current_piece = Some(new_piece);
+            if !occupied && new_piece.floor_kicks() <= MAX_FLOOR_KICKS {
+                self.set_current_piece(new_piece);
                 return true;
             }
         }

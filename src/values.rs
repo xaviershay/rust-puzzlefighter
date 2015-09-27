@@ -205,7 +205,22 @@ impl Hash for Block {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Rotation {
+    AntiClockwise,
+    Clockwise
+}
+
+impl Rotation {
+    pub fn reverse(&self) -> Self {
+        match *self {
+            Rotation::AntiClockwise => Rotation::Clockwise,
+            Rotation::Clockwise => Rotation::AntiClockwise,
+        }
+    }
+
+}
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Direction {
     Up,
     Right,
@@ -222,6 +237,14 @@ impl Direction {
             Direction::Left
         )
     }
+
+    pub fn rotate(&self, r: Rotation) -> Self {
+        match r {
+            Rotation::AntiClockwise => self.anti_clockwise(),
+            Rotation::Clockwise => self.clockwise()
+        }
+    }
+
     pub fn clockwise(&self) -> Self {
         match *self {
             Direction::Up    => Direction::Right,
@@ -256,6 +279,7 @@ pub struct Piece {
     pub blocks: [Block; 2],
     pub direction: Direction,
     pub position: GridPosition,
+    floor_kicks: u8,
 }
 
 impl Piece {
@@ -265,6 +289,7 @@ impl Piece {
             blocks: [b1, b2],
             position: GridPosition::new(0, 0),
             direction: Direction::Up,
+            floor_kicks: 0,
         }
     }
 
@@ -280,6 +305,7 @@ impl Piece {
             blocks: [block1, block2],
             position: pos,
             direction: Direction::Up,
+            floor_kicks: 0,
         }
     }
 
@@ -288,6 +314,7 @@ impl Piece {
             blocks: self.blocks,
             position: position,
             direction: direction,
+            floor_kicks: self.floor_kicks,
         }
     }
 
@@ -314,17 +341,23 @@ impl Piece {
         }
     }
 
-    pub fn clockwise(&self) -> Self {
-        let direction = self.direction.clockwise();
-
-        Piece {
-            direction: direction,
-            ..*self
+    /// Indicate that the piece was just kicked off a wall or floor.
+    pub fn kick(&self) -> Self {
+        if self.direction == Direction::Down {
+            Piece {
+                floor_kicks: self.floor_kicks + 1,
+                ..*self
+            }
+        } else {
+            *self
         }
     }
 
-    pub fn anti_clockwise(&self) -> Self {
-        let direction = self.direction.anti_clockwise();
+    /// Number of time this piece has been kicked off the floor.
+    pub fn floor_kicks(&self) -> u8 { self.floor_kicks }
+
+    pub fn rotate(&self, r: Rotation) -> Self {
+        let direction = self.direction.rotate(r);
 
         Piece {
             direction: direction,

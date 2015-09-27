@@ -5,7 +5,7 @@ extern crate bitflags;
 pub mod textures;
 mod block_grid;
 mod values;
-mod board;
+pub mod board;
 pub mod board_renderer;
 pub mod human_player;
 

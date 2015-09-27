@@ -69,10 +69,10 @@ impl HumanPlayer {
             // TODO: Handle key repeat on our own timer.
             match action {
                 Some(&InputAction::AntiClockwise) => {
-                    board.move_piece(|current| { current.anti_clockwise() });
+                    board.rotate(Rotation::AntiClockwise);
                 },
                 Some(&InputAction::Clockwise) => {
-                    board.move_piece(|current| { current.clockwise() });
+                    board.rotate(Rotation::Clockwise);
                 },
                 Some(&InputAction::Left) => {
                     board.move_piece(|current| { current.offset(Direction::Left) });

@@ -64,3 +64,4 @@ macro_rules! make_board {
 mod test_drop;
 mod test_fuse;
 mod test_debug;
+mod test_wall_kick;
