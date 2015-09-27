@@ -87,7 +87,8 @@ pub struct Board {
     pub events: LinkedList<BlockEvent>,
 }
 
-const SLOW_SPEED: f64 = 0.5;
+const SLOW_SPEED: f64 = 0.8;
+const DROP_WAIT: f64 = 0.15;
 const TURBO_SPEED: f64 = 0.05;
 
 impl Board {
@@ -231,8 +232,7 @@ impl Board {
                     if self.move_piece(|current| current.offset(Direction::Down) ) {
                         step = true
                     } else {
-                        // Landed pieces some extra non-turbo time to move
-                        if self.step_accumulator > SLOW_SPEED / 3.0 {
+                        if self.step_accumulator > DROP_WAIT {
                             if let Some(piece) = self.current_piece {
                                 for pb in piece.blocks().iter() {
                                     let bottom = self.grid.bottom(*pb);
