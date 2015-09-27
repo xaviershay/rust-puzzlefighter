@@ -10,6 +10,7 @@ extern crate ai_behavior;
 use values::*;
 use textures::*;
 use board::*;
+use wrapper_types::*;
 
 use self::uuid::Uuid;
 use self::piston_window::*;
@@ -136,7 +137,7 @@ impl BoardRenderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> 
         sprite.set_texture(self.textures.get(block.to_texture_name()));
     }
 
-    pub fn render(&mut self, event: &PistonWindow, board: &mut Board) -> Option<RenderState> {
+    pub fn render(&mut self, event: &GameWindow, board: &mut Board) -> Option<RenderState> {
         let mut result = None;
 
         self.scene.event(event);
@@ -226,7 +227,7 @@ impl BoardRenderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> 
 
                 seen.insert(block.block());
 
-                if self.scene.running_for_child(sprite_id) == 0 {
+                if self.scene.running_for_child(sprite_id).unwrap() == 0 {
                     self.update_block(sprite_id, &block);
                 } else {
                     render_state.dropping += 1;
@@ -241,7 +242,7 @@ impl BoardRenderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> 
             for removed in existing.difference(&seen) {
                 let done = {
                     let sprite_id = self.sprites.get(removed).unwrap();
-                    self.scene.running_for_child(*sprite_id) == 0
+                    self.scene.running_for_child(*sprite_id).unwrap() == 0
                 };
 
                 if done {

@@ -10,6 +10,7 @@ name = "tests"
 animation_test = []
 
 [dependencies]
+piston = "*"
 piston_window = "*"
 pistoncore-sdl2_window = "*"
 piston2d-graphics = "*"

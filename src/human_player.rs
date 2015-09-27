@@ -1,6 +1,7 @@
 use board::Board;
 use piston_window::*;
 use values::*;
+use wrapper_types::*;
 
 use std::collections::HashMap;
 
@@ -30,12 +31,22 @@ impl HumanPlayer {
             inputs.insert(Button::Keyboard(Key::A), InputAction::Left);
             inputs.insert(Button::Keyboard(Key::D), InputAction::Right);
             inputs.insert(Button::Keyboard(Key::C), InputAction::Turbo);
+            inputs.insert(Button::Joystick(0, JoystickInput::Button(3)), InputAction::Clockwise);
+            inputs.insert(Button::Joystick(0, JoystickInput::Button(1)), InputAction::AntiClockwise);
+            inputs.insert(Button::Joystick(0, JoystickInput::Left), InputAction::Left);
+            inputs.insert(Button::Joystick(0, JoystickInput::Right), InputAction::Right);
+            inputs.insert(Button::Joystick(0, JoystickInput::Down), InputAction::Turbo);
         } else {
             inputs.insert(Button::Keyboard(Key::Up), InputAction::AntiClockwise);
             inputs.insert(Button::Keyboard(Key::Down), InputAction::Clockwise);
             inputs.insert(Button::Keyboard(Key::Left), InputAction::Left);
             inputs.insert(Button::Keyboard(Key::Right), InputAction::Right);
             inputs.insert(Button::Keyboard(Key::Space), InputAction::Turbo);
+            inputs.insert(Button::Joystick(1, JoystickInput::Button(3)), InputAction::Clockwise);
+            inputs.insert(Button::Joystick(1, JoystickInput::Button(1)), InputAction::AntiClockwise);
+            inputs.insert(Button::Joystick(1, JoystickInput::Left), InputAction::Left);
+            inputs.insert(Button::Joystick(1, JoystickInput::Right), InputAction::Right);
+            inputs.insert(Button::Joystick(1, JoystickInput::Down), InputAction::Turbo);
         }
 
         if cfg!(debug_assertions) {
@@ -52,7 +63,7 @@ impl HumanPlayer {
         }
     }
 
-    pub fn update(&self, e: &PistonWindow, board: &mut Board) {
+    pub fn update(&self, e: &GameWindow, board: &mut Board) {
         if let Some(button) = e.release_args() {
             let action = self.input_map.get(&button);
 

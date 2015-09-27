@@ -8,12 +8,14 @@ mod values;
 pub mod board;
 pub mod board_renderer;
 pub mod human_player;
+mod wrapper_types;
 
 pub use self::board::*;
 pub use self::values::*;
 pub use self::block_grid::*;
 
 extern crate piston_window;
+extern crate sdl2_window;
 extern crate uuid;
 extern crate graphics;
 extern crate find_folder;
