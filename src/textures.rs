@@ -10,12 +10,14 @@ use std::fs;
 
 use gfx_texture::{Texture,TextureSettings,Flip};
 
+use wrapper_types::*;
+
 pub struct Textures<R> where R: gfx::Resources {
     textures: HashMap<String, Rc<Texture<R>>>,
 }
 
 impl Textures<gfx_device_gl::Resources> {
-    pub fn new(window: &piston_window::PistonWindow) -> Self {
+    pub fn new(window: &GameWindow) -> Self {
         let assets = find_folder::Search::ParentsThenKids(3, 3)
             .for_folder("assets/gen").ok()
             .expect("No assets/ directory found");

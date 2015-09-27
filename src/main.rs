@@ -7,6 +7,7 @@ mod values;
 mod board;
 mod human_player;
 mod board_renderer;
+mod wrapper_types;
 
 extern crate piston_window;
 extern crate uuid;
@@ -14,7 +15,9 @@ extern crate graphics;
 extern crate find_folder;
 extern crate gfx;
 extern crate gfx_texture;
+extern crate sdl2_window;
 
+use wrapper_types::GameWindow;
 use piston_window::*;
 use std::rc::*;
 
@@ -37,11 +40,13 @@ fn main() {
     let total_width = right_x + board_width + gutter;
     let total_height = gutter * 2.0 + cell * dimensions.h() as f64;
 
-    let window: PistonWindow =
+    let window: GameWindow =
         WindowSettings::new("Puzzle Fighter Turbo II", (total_width as u32, total_height as u32))
         .exit_on_esc(true)
         .build()
         .unwrap();
+
+    let _ = window.window.borrow_mut().init_joysticks();
 
     let mut left_board = Board::new(dimensions);
     let mut right_board = Board::new(dimensions);
@@ -58,8 +63,8 @@ fn main() {
         dimensions
         );
 
-    let left_player = HumanPlayer::new(true);
-    let right_player = HumanPlayer::new(false);
+    let mut left_player = HumanPlayer::new(true);
+    let mut right_player = HumanPlayer::new(false);
 
     let mut left_render_state = RenderState::new();
     let mut right_render_state = RenderState::new();

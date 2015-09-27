@@ -10,9 +10,11 @@ name = "tests"
 animation_test = []
 
 [dependencies]
+piston = "*"
 piston_window = "*"
 pistoncore-sdl2_window = "*"
 piston2d-graphics = "*"
+piston2d-sprite = "*"
 find_folder = "*"
 gfx = "*"
 gfx_device_gl = "*"
@@ -22,9 +24,9 @@ piston-ai_behavior = "*"
 rand = "*"
 bitflags = "*"
 
-[dependencies.piston2d-sprite]
-git = "https://github.com/xaviershay/sprite"
-branch = "issue-113"
+# [dependencies.piston2d-sprite]
+# git = "https://github.com/xaviershay/sprite"
+# branch = "issue-113"
 
 [[example]]
 name = "generate_tiles"
