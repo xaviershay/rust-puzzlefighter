@@ -226,18 +226,31 @@ impl Board {
                 self.step_accumulator += dt;
 
                 if self.step_accumulator > self.speed {
-                    self.step_accumulator -= self.speed;
+                    let mut step = false;
 
-                    if !self.move_piece(|current| current.offset(Direction::Down) ) {
-                        if let Some(piece) = self.current_piece {
-                            for pb in piece.blocks().iter() {
-                                let bottom = self.grid.bottom(*pb);
-                                let resting = pb.drop(pb.y() - bottom.y());
-                                self.grid.set(resting);
-                                self.emit(BlockEvent::Drop(*pb, resting));
+                    if self.move_piece(|current| current.offset(Direction::Down) ) {
+                        step = true
+                    } else {
+                        // Landed pieces some extra non-turbo time to move
+                        if self.step_accumulator > SLOW_SPEED / 3.0 {
+                            if let Some(piece) = self.current_piece {
+                                for pb in piece.blocks().iter() {
+                                    let bottom = self.grid.bottom(*pb);
+                                    let resting = pb.drop(pb.y() - bottom.y());
+                                    self.grid.set(resting);
+                                    self.emit(BlockEvent::Drop(*pb, resting));
+                                }
+                                self.current_piece = None;
+                                self.phase = Phase::Settling(0);
+                                step = true;
                             }
-                            self.current_piece = None;
-                            self.phase = Phase::Settling(0);
+                        }
+                    }
+
+                    if step {
+                        self.step_accumulator -= SLOW_SPEED;
+                        if self.step_accumulator < 0.0 {
+                            self.step_accumulator = 0.0;
                         }
                     }
                 }
@@ -576,9 +589,6 @@ impl Board {
     pub fn turbo(&mut self, enable: bool) {
         if enable {
             self.speed = TURBO_SPEED;
-            if self.step_accumulator > TURBO_SPEED {
-                self.step_accumulator = TURBO_SPEED;
-            }
         } else {
             self.speed = SLOW_SPEED;
         }
