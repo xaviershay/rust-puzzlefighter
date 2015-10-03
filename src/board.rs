@@ -4,10 +4,12 @@ use board_renderer::RenderState;
 
 use std::collections::LinkedList;
 
+#[derive(Copy,Clone,Debug)]
 enum Phase {
     NewPiece,
     PieceFalling,
-    Settling(u32),
+    AgeAndAttack,
+    Settling(u32, bool),
 }
 
 type StrikePattern = Vec<Color>;
@@ -197,8 +199,7 @@ impl Board {
 
     pub fn update(&mut self, dt: f64, enemy: &mut Board, render_state: &RenderState) {
         match self.phase {
-            // TODO: Is a noop phase really a phase? Probably not.
-            Phase::NewPiece => {
+            Phase::AgeAndAttack => {
                 // Age everything
                 self.grid.age();
 
@@ -213,10 +214,13 @@ impl Board {
                     }
 
                     self.attack_from_left = !self.attack_from_left;
-                    self.phase = Phase::Settling(0);
                 }
 
-                // Create new piece
+                self.phase = Phase::Settling(0, false);
+            }
+
+            // TODO: Is a noop phase really a phase? Probably not.
+            Phase::NewPiece => {
                 let piece = self.next_piece.unwrap().dup_to(
                     GridPosition::new(3, self.dimensions.h() as i8),
                     Direction::Up);
@@ -244,7 +248,7 @@ impl Board {
                                     self.emit(BlockEvent::Drop(*pb, resting));
                                 }
                                 self.current_piece = None;
-                                self.phase = Phase::Settling(0);
+                                self.phase = Phase::Settling(0, true);
                                 step = true;
                             }
                         }
@@ -258,7 +262,7 @@ impl Board {
                     }
                 }
             },
-            Phase::Settling(combo_depth) => {
+            Phase::Settling(combo_depth, age_and_attack) => {
                 if render_state.is_settled() {
                     if !self.drop_blocks() {
                         self.fuse_blocks();
@@ -266,11 +270,15 @@ impl Board {
                         let break_depth = self.break_blocks(combo_depth) as f64;
 
                         if break_depth > 0.0 {
-                            self.phase = Phase::Settling(combo_depth + 1);
+                            self.phase = Phase::Settling(combo_depth + 1, age_and_attack);
                         } else {
                             enemy.attack(self.strength);
                             self.strength = 0;
-                            self.phase = Phase::NewPiece;
+                            self.phase = if age_and_attack {
+                                Phase::AgeAndAttack
+                            } else {
+                                Phase::NewPiece
+                            }
                         }
                     }
                 }
