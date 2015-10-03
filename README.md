@@ -2,7 +2,7 @@ A puzzle fighter/swordfighting clone as an excuse for me to learn rust.
 
 # Features
 
-* Two-player keyboard controls (WASDC, arrows+space).
+* Two-player keyboard (WASDC, arrows+space) or gamepad controls.
 * Sprinkle attacks with combo multiplier.
 
 ![screenshot](./screenshot.png)
@@ -26,3 +26,4 @@ Some debug keys are enabled in non-release builds:
 
     Q:   Load blocks from board.txt
     1-4: Set next piece to a colored breaker
+    5:   Drop an attack.
