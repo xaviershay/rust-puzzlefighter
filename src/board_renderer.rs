@@ -164,7 +164,7 @@ impl BoardRenderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> 
                     // Top left
                     let pos = PixelPosition::new(
                         block.x() as f64,
-                        (block.y() + 1) as f64 * self.cell_h());
+                        (2 - block.y()) as f64 * self.cell_h());
 
                     self.update_block_to_pos(sprite_id, block, pos);
                 }
