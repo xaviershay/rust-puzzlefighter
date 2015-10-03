@@ -32,14 +32,14 @@ impl Attack {
 
         for i in 0..self.sprinkles+1 {
             let ref pattern = self.strike_pattern;
-            let color = pattern[i as usize % pattern.len()];
-            let block = Block::new_with_age(color, 3);
             let x = i % dimensions.w();
             let x = if attack_from_left {
                 x
             } else {
                 dimensions.w() - x - 1
             };
+            let color = pattern[x as usize];
+            let block = Block::new_with_age(color, 3);
 
             let position = GridPosition::new(
                 x as i8,
