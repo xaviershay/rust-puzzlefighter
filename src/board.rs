@@ -30,7 +30,7 @@ impl Attack {
     fn apply(&self, dimensions: Dimension, attack_from_left: bool) -> LinkedList<PositionedBlock> {
         let mut attack = LinkedList::new();
 
-        for i in 0..self.sprinkles+1 {
+        for i in 0..self.sprinkles {
             let ref pattern = self.strike_pattern;
             let x = i % dimensions.w();
             let x = if attack_from_left {
@@ -579,7 +579,8 @@ impl Board {
                 }
             }
 
-            self.strength += (attack / 2) * (combo_depth + 1);
+            let x = (attack / 2) * (combo_depth + 1);
+            self.strength += x;
 
             // Destroy everything
             let mut highest_depth = 0;
