@@ -23,6 +23,7 @@ fn main() {
     colors.insert("yellow", (224, 185,  26));
     colors.insert("green",  (134, 179,  23));
     colors.insert("blue",   (28,  143, 144));
+    colors.insert("grey",   (198, 198, 198));
 
     let width = 32;
     let height = 32;
@@ -126,6 +127,33 @@ fn main() {
         cmd.extend(cutout(&color_circle));
         cmd.extend(circle_border(&center, &edge, c3(darker)));
         convert(cmd, &out.join(format!("{}_breaker.png", name)));
+    }
+
+    let background = out.join("grey.png");
+
+    // Counters
+    for (name, rgb) in &colors {
+        if *name == "grey" {
+            continue;
+        }
+
+        for n in 1..4 {
+            let number = src.join(format!("{}.png", n));
+            let color_number = tmp.join(format!("{}.png", n));
+
+            // Color the number
+            let mut cmd = Vec::new();
+            cmd.extend(size(d(width, height)));
+            cmd.push(bg(c3(*rgb)));
+            cmd.extend(cutout(&number));
+            convert(cmd, &color_number);
+
+            // Place number on background
+            let mut cmd = Vec::new();
+            cmd.push(background.to_str().unwrap().to_string());
+            cmd.extend(over(&color_number));
+            convert(cmd, &out.join(format!("{}_{}.png", name, n)));
+        }
     }
 }
 
