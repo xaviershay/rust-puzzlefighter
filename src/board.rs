@@ -12,7 +12,7 @@ enum Phase {
     Settling(u32, bool),
 }
 
-type StrikePattern = Vec<Color>;
+type StrikePattern = BlockGrid;
 
 struct Attack {
     strike_pattern: StrikePattern,
@@ -38,7 +38,11 @@ impl Attack {
             } else {
                 dimensions.w() - x - 1
             };
-            let color = pattern[x as usize];
+            let cx = x as i8;
+            let cy = (i / dimensions.w()) % pattern.h();
+            let color = pattern.at(GridPosition::new(cx, cy as i8))
+                .expect("Drop patterns assumed to be correctly sized.")
+                .color();
             let block = Block::new_with_age(color, 3);
 
             let position = GridPosition::new(
@@ -166,12 +170,16 @@ impl Board {
 
     pub fn attack(&mut self, strength: u32) {
         if strength > 0 {
-            // basic foil/chunli pattern
-            let strikes = vec!(
-                Color::Red, Color::Red, Color::Green, Color::Green, Color::Blue, Color::Blue
-            );
+            // Ken drop pattern
+            let mut drop_pattern = Board::new(Dimension::new(6, 4));
+            drop_pattern.add_blocks(vec!(
+                "YYYYYY".to_owned(),
+                "BBBBBB".to_owned(),
+                "GGGGGG".to_owned(),
+                "RRRRRR".to_owned(),
+            ));
 
-            self.attacks.push_back(Attack::sprinkles(strikes, strength));
+            self.attacks.push_back(Attack::sprinkles(drop_pattern.grid, strength));
         }
     }
 

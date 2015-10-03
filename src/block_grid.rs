@@ -22,6 +22,8 @@ impl BlockGrid {
         BlockGrid {cells: rows}
     }
 
+    pub fn h(&self) -> u32 { (self.cells.len() / 2) as u32 }
+
     pub fn debug(&self) {
         let height = self.cells.len();
         for y in 0..height {
