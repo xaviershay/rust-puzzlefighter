@@ -100,6 +100,7 @@ pub struct Block {
     pub color: Color,
     breaker: bool,
     borders: Sides,
+    age: u8,
 }
 
 impl Block {
@@ -116,6 +117,17 @@ impl Block {
             color: color,
             breaker: breaker,
             borders: SIDE_ALL,
+            age: 0,
+        }
+    }
+
+    pub fn new_with_age(color: Color, age: u8) -> Self {
+        Block {
+            id: Uuid::new_v4(),
+            color: color,
+            breaker: false,
+            borders: SIDE_ALL,
+            age: age,
         }
     }
 
@@ -130,19 +142,28 @@ impl Block {
                 Color::Red    => "red_breaker",
                 Color::Green  => "green_breaker",
                 Color::Yellow => "yellow_breaker",
-            }
+            }.to_string()
         } else {
-            match self.color {
+            let color = match self.color {
                 Color::Blue   => "blue",
                 Color::Red    => "red",
                 Color::Green  => "green",
                 Color::Yellow => "yellow",
+            }.to_string();
+
+            if self.age > 0 {
+                if self.age > 3 {
+                    "grey".to_string()
+                } else {
+                    format!("{}_{}", color, self.age)
+                }
+            } else {
+                color
             }
         };
 
         name.to_string() + &self.borders.to_texture_suffix() + ".png"
     }
-
 }
 
 impl Sides {
@@ -386,13 +407,29 @@ impl PositionedBlock {
         }
     }
 
+    pub fn do_age(&self) -> Self {
+        if self.age() > 0 {
+            PositionedBlock {
+                block: Block {
+                    age: self.age() - 1,
+                    ..self.block
+                },
+                ..*self
+            }
+        } else {
+            *self
+        }
+    }
+
     pub fn x(&self) -> i8 { self.position.x() }
     pub fn y(&self) -> i8 { self.position.y() }
     pub fn block(&self) -> Block { self.block }
     pub fn position(&self) -> GridPosition { self.position }
     pub fn color(&self) -> Color { self.block.color }
+    pub fn age(&self) -> u8 { self.block.age }
     pub fn borders(&self) -> Sides { self.block.borders }
     pub fn breaker(&self) -> bool { self.block.breaker() }
+    pub fn is_breakable(&self) -> bool { self.age() == 0 }
     pub fn is_fused(&self) -> bool { self.block.is_fused() }
     pub fn to_texture_name(&self) -> String { self.block.to_texture_name() }
     pub fn fuse(&self, borders: Sides) -> Self {
@@ -408,7 +445,7 @@ impl PositionedBlock {
     }
 
     pub fn can_fuse_with(&self, other: PositionedBlock) -> bool {
-        self.color() == other.color() && !self.breaker() && !other.breaker()
+        self.color() == other.color() && !self.breaker() && !other.breaker() && self.age() == 0 && other.age() == 0
     }
 
     pub fn offset(&self, direction: Direction) -> Self {

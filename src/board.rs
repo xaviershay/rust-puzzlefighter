@@ -31,7 +31,7 @@ impl Attack {
         for i in 0..self.sprinkles+1 {
             let ref pattern = self.strike_pattern;
             let color = pattern[i as usize % pattern.len()];
-            let block = Block::new(color, false);
+            let block = Block::new_with_age(color, 3);
             let x = i % dimensions.w();
             let x = if attack_from_left {
                 x
@@ -199,6 +199,9 @@ impl Board {
         match self.phase {
             // TODO: Is a noop phase really a phase? Probably not.
             Phase::NewPiece => {
+                // Age everything
+                self.grid.age();
+
                 // Apply attack
                 if let Some(attack) = self.attacks.pop_front() {
                     let blocks = attack.apply(self.dimensions, self.attack_from_left);

@@ -95,7 +95,7 @@ impl BlockGrid {
         let mut found = false;
         for direction in Direction::all() {
             if let Some(candidate) = self.at(block.position().offset(direction)) {
-                if candidate.color() == block.color() {
+                if candidate.color() == block.color() && candidate.is_breakable() {
                     let replace = {
                         let default = 255; // TODO: u8::MAX
                         let existing = result.get(&candidate).unwrap_or(&default);
@@ -147,5 +147,18 @@ impl BlockGrid {
         }
 
         list
+    }
+
+    pub fn age(&mut self) {
+        for row in self.cells.iter_mut() {
+            for cell in row.iter_mut() {
+                match *cell {
+                    Some(x) => {
+                        *cell = Some(x.do_age())
+                    },
+                    None => {}
+                }
+            }
+        }
     }
 }
