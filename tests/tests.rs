@@ -65,3 +65,4 @@ mod test_drop;
 mod test_fuse;
 mod test_debug;
 mod test_wall_kick;
+mod test_count_groups;

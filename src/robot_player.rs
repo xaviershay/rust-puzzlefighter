@@ -9,6 +9,17 @@ use std::vec::Vec;
 
 use std::cmp::Ordering;
 
+#[derive(PartialEq, PartialOrd, Debug)]
+pub struct Score(f64);
+
+impl Eq for Score { }
+
+impl Ord for Score {
+    fn cmp(&self, other: &Self) -> Ordering {
+      self.partial_cmp(other).unwrap()
+    }
+}
+
 #[derive(Debug, Copy, Clone)]
 enum Actions {
     Move(Direction),
@@ -45,33 +56,55 @@ impl RobotPlayer {
                 &Actions::Move(direction) => {
                     board.move_piece(|current| { current.offset(direction) });
                 },
-                _ => {}
+                &Actions::Rotate(r) => {
+                    board.rotate(r);
+                }
             }
         }
     }
 
     pub fn update(&mut self, e: &GameWindow, board: &mut Board) {
         e.update(|args| {
+            if board.current_piece().is_none() {
+                return;
+            }
+
             board.turbo(true);
 
-            if board.current_piece().is_some() && board.current_piece() != self.current_piece {
+            if self.current_piece.is_none() || (
+                board.current_piece().unwrap().id() != self.current_piece.unwrap().id()
+                ) {
+                println!("Making an AI decision");
                 self.current_piece = board.current_piece();
                 let piece = self.current_piece.unwrap();
+                let mut potential_moves = Vec::new();
 
                 let mut candidates = BTreeMap::new();
+
+                // This technically generates dups for horizontal positions.
+                // Meh.
                 for x in 0..board.dimensions().w() as i8 {
-                    let relative = x - piece.x();
-                    let mut moves = Vec::new();
-                    let direction = if relative < 0 {
-                        Direction::Left
-                    } else {
-                        Direction::Right
-                    };
+                    for r in 0..3 {
+                        let relative = x - piece.x();
+                        let mut moves = Vec::new();
+                        let direction = if relative < 0 {
+                            Direction::Left
+                        } else {
+                            Direction::Right
+                        };
 
-                    for y in 0..(relative.abs()) {
-                        moves.push(Actions::Move(direction))
+                        for y in 0..r {
+                            moves.push(Actions::Rotate(Rotation::Clockwise))
+                        }
+                        for y in 0..(relative.abs()) {
+                            moves.push(Actions::Move(direction))
+                        }
+
+                        potential_moves.push(moves)
                     }
+                }
 
+                for moves in potential_moves {
                     let mut board = board.clone();
                     self.apply(&mut board, &moves);
                     board.place_current_piece();
@@ -84,12 +117,14 @@ impl RobotPlayer {
                         highest = max(highest, block.y());
                     }
 
-                    // TODO: Higher is bad, should give lower score.
-                    // Reverse next with next_back below
-                    candidates.insert(highest, moves);
+                    let groups = board.grid().count_groups() as f64;
+
+                    let weights = (-0.2, -0.8);
+
+                    candidates.insert(Score(highest as f64 * weights.0 + groups * weights.1), moves);
                 }
 
-                let best = candidates.values().next().unwrap();
+                let best = candidates.values().next_back().unwrap();
 
                 self.apply(board, best);
             }

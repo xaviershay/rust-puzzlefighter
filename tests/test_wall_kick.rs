@@ -195,6 +195,28 @@ fn double_floor_kick_forbidden() {
     assert_eq!(Direction::Left, piece.direction);
 }
 
+// TODO: Fix this test.
+/*
+#[test]
+fn wall_kick_height_gain() {
+    let mut board = make_board!(
+        "  ",
+        "  ",
+        "R "
+    );
+    board.set_current_piece(Piece::rand(1, 0));
+
+    // Flips vertically
+    board.rotate(Rotation::Clockwise);
+
+    // Should not end put higher than we started
+    board.rotate(Rotation::Clockwise);
+    let piece = board.rotate(Rotation::Clockwise).unwrap();
+
+    assert_eq!(GridPosition::new(1, 0), piece.position);
+}
+*/
+
 #[test]
 fn double_wall_kick_allowed() {
     let mut board = make_board!(

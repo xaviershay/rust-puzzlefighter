@@ -4,6 +4,7 @@ extern crate rand;
 use self::uuid::Uuid;
 
 use std::hash::{Hash, Hasher};
+use std::fmt;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct GridPosition {
@@ -110,6 +111,8 @@ impl Block {
         // TODO: ANSI colors! Currently only suitable for debugging fuses.
         self.borders.debug_char().to_string()
     }
+
+    pub fn id(&self) -> Uuid { self.id }
 
     pub fn new(color: Color, breaker: bool) -> Self {
         Block {
@@ -294,6 +297,17 @@ impl Direction {
     }
 }
 
+impl fmt::Display for Direction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", match *self {
+            Direction::Up    => "↑",
+            Direction::Right => "→",
+            Direction::Down  => "↓",
+            Direction::Left  => "←",
+        })
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Piece {
     // TODO: These shouldn't be public
@@ -352,6 +366,10 @@ impl Piece {
             Direction::Down => { [positions[1], positions[0]] },
             _               => { positions },
         }
+    }
+
+    pub fn id(&self) -> Uuid {
+        self.blocks[0].id()
     }
 
     pub fn offset(&self, direction: Direction) -> Self {
