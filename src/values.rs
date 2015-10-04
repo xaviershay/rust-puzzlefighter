@@ -304,7 +304,6 @@ pub struct Piece {
 }
 
 impl Piece {
-    #[cfg(debug_assertions)]
     pub fn new(b1: Block, b2: Block) -> Self {
         Piece {
             blocks: [b1, b2],
