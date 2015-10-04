@@ -1,5 +1,5 @@
 use values::*;
-use std::collections::{LinkedList,HashMap};
+use std::collections::{LinkedList,HashMap,HashSet};
 
 #[derive(Clone)]
 pub struct BlockGrid {
@@ -119,6 +119,35 @@ impl BlockGrid {
             }
         }
         found
+    }
+
+    pub fn count_groups(&self) -> u32 {
+        let mut counted = HashSet::new();
+        let mut count = 0;
+
+        for block in self.blocks() {
+            if !counted.contains(&block) {
+                count += 1;
+                self.count_groups_recurse(block, &mut counted);
+            }
+        }
+        count
+    }
+
+    pub fn count_groups_recurse(&self, block: PositionedBlock, counted: &mut HashSet<PositionedBlock>) {
+        if counted.contains(&block) {
+            return;
+        }
+
+        counted.insert(block);
+
+        for direction in Direction::all() {
+            if let Some(candidate) = self.at(block.position().offset(direction)) {
+                if candidate.color() == block.color() {
+                    self.count_groups_recurse(candidate, counted);
+                }
+            }
+        }
     }
 
     // Returns a positioned block dropped as far as possible.

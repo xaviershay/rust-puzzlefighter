@@ -68,6 +68,7 @@ fn main() {
     //let mut left_player = HumanPlayer::new(true);
     let mut left_player = RobotPlayer::new();
     let mut right_player = HumanPlayer::new(false);
+    let mut right_player = RobotPlayer::new();
 
     let mut left_render_state = RenderState::new();
     let mut right_render_state = RenderState::new();
