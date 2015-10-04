@@ -14,6 +14,7 @@ enum Phase {
 
 type StrikePattern = BlockGrid;
 
+#[derive(Clone)]
 struct Attack {
     strike_pattern: StrikePattern,
     sprinkles: u32,
@@ -59,6 +60,7 @@ impl Attack {
 
 const MAX_FLOOR_KICKS: u8 = 1;
 
+#[derive(Clone)]
 pub struct Board {
     // Public
     dimensions: Dimension,
@@ -123,6 +125,8 @@ impl Board {
     pub fn debug(&self) {
         self.grid().debug();
     }
+
+    pub fn dimensions(&self) -> Dimension { self.dimensions }
 
     pub fn next_piece(&self) -> Option<Piece> { self.next_piece }
     pub fn current_piece(&self) -> Option<Piece> { self.current_piece }
@@ -291,6 +295,19 @@ impl Board {
                     }
                 }
             }
+        }
+    }
+
+    // TODO: DRY up with logic loop above
+    pub fn place_current_piece(&mut self) {
+        if let Some(piece) = self.current_piece {
+            for pb in piece.blocks().iter() {
+                let bottom = self.grid.bottom(*pb);
+                let resting = pb.drop(pb.y() - bottom.y());
+                self.grid.set(resting);
+                self.emit(BlockEvent::Drop(*pb, resting));
+            }
+            self.current_piece = None;
         }
     }
 

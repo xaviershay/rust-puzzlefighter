@@ -8,6 +8,7 @@ mod values;
 pub mod board;
 pub mod board_renderer;
 pub mod human_player;
+pub mod robot_player;
 mod wrapper_types;
 
 pub use self::board::*;

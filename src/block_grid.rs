@@ -1,6 +1,7 @@
 use values::*;
 use std::collections::{LinkedList,HashMap};
 
+#[derive(Clone)]
 pub struct BlockGrid {
     cells: Vec<Vec<Option<PositionedBlock>>>,
 }

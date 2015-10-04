@@ -294,7 +294,7 @@ impl Direction {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Piece {
     // TODO: These shouldn't be public
     pub blocks: [Block; 2],
@@ -328,6 +328,8 @@ impl Piece {
             floor_kicks: 0,
         }
     }
+
+    pub fn x(&self) -> i8 { self.position.x() }
 
     pub fn dup_to(&self, position: GridPosition, direction: Direction) -> Self {
         Piece {
