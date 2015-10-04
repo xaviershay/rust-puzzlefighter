@@ -6,6 +6,7 @@ mod block_grid;
 mod values;
 mod board;
 mod human_player;
+mod robot_player;
 mod board_renderer;
 mod wrapper_types;
 
@@ -25,6 +26,7 @@ use textures::Textures;
 use values::*;
 use board::*;
 use human_player::*;
+use robot_player::*;
 use board_renderer::*;
 
 fn main() {
@@ -63,7 +65,8 @@ fn main() {
         dimensions
         );
 
-    let mut left_player = HumanPlayer::new(true);
+    //let mut left_player = HumanPlayer::new(true);
+    let mut left_player = RobotPlayer::new();
     let mut right_player = HumanPlayer::new(false);
 
     let mut left_render_state = RenderState::new();
