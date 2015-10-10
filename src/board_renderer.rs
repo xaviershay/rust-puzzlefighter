@@ -286,7 +286,7 @@ impl BoardRenderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> 
                 self.cell_dimensions.h() as f64 / -2.0,
             );
 
-            for child in &self.scene.children {
+            for child in self.scene.children() {
                use graphics::*;
 
                 let (w, h) = (self.cell_dimensions.w(), self.cell_dimensions.h());
