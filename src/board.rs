@@ -94,7 +94,7 @@ pub struct Board {
 }
 
 const SLOW_SPEED: f64 = 0.8;
-const DROP_WAIT: f64 = 0.15;
+const DROP_WAIT: f64 = 0.05;
 const TURBO_SPEED: f64 = 0.05;
 
 impl Board {
