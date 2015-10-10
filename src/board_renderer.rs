@@ -260,15 +260,13 @@ impl BoardRenderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> 
                                
             // Board bounding box
             {
-                let dimensions = [0.0, 0.0,
-                    self.cell_dimensions.w() as f64 * self.dimensions.w() as f64,
-                    self.cell_dimensions.h() as f64 * self.dimensions.h() as f64,
-                ];
+                use graphics::*;
+
                 let cam = &cam.trans(
                     self.x_gutter() + self.cell_dimensions.w() as f64 / -2.0,
-                    self.cell_dimensions.h() as f64 / 2.0);
-                Rectangle::new([1.0, 1.0, 1.0, 0.2])
-                    .draw(dimensions, &cam.draw_state, cam.transform, g);
+                    self.cell_dimensions.h() as f64 / 2.0).trans(-29.0, -29.0);
+                let board = self.textures.get("board.png".to_string());
+                image(&*board, cam.transform, g);
             }
 
             self.scene.draw(cam.transform, g);
