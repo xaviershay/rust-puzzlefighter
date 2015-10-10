@@ -41,7 +41,7 @@ fn main() {
     let total_height = gutter * 2.0 + cell * dimensions.h() as f64;
 
     let window: GameWindow =
-        WindowSettings::new("Puzzle Fighter Turbo II", (total_width as u32, total_height as u32))
+        WindowSettings::new("Puzzlefight II: Jungle Mayhem", (total_width as u32, total_height as u32))
         .exit_on_esc(true)
         .build()
         .unwrap();
@@ -71,6 +71,7 @@ fn main() {
 
     let mut start_screen = true;
     let splash = textures.get("splash.png".to_string());
+    let ferns = textures.get("ferns.png".to_string());
     let to_start = textures.get("press-to-start.png".to_string());
     let mut d = 0.0;
     let mut blink = true;
@@ -100,11 +101,12 @@ fn main() {
                 }
             });
         } else {
-            e.draw_2d(|_c, g| {
+            e.draw_2d(|c, g| {
                 use graphics::*;
 
                 // Black background
                 clear([0.0, 0.0, 0.0, 1.0], g);
+                image(&*ferns, c.transform, g);
             });
 
             left_player.update(&e, &mut left_board);
