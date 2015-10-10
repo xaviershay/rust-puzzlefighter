@@ -69,38 +69,69 @@ fn main() {
     let mut left_render_state = RenderState::new();
     let mut right_render_state = RenderState::new();
 
+    let mut start_screen = true;
+    let splash = textures.get("splash.png".to_string());
+    let to_start = textures.get("press-to-start.png".to_string());
+    let mut d = 0.0;
+    let mut blink = true;
+
     for e in window {
-        e.draw_2d(|_c, g| {
-            use graphics::*;
+        if start_screen {
+            e.draw_2d(|c, g| {
+                use graphics::*;
 
-            // Black background
-            clear([0.0, 0.0, 0.0, 1.0], g);
-        });
+                // Black background
+                clear([0.0, 0.0, 0.0, 1.0], g);
+                image(&*splash, c.transform, g);
 
-        left_player.update(&e, &mut left_board);
-        right_player.update(&e, &mut right_board);
+                if blink {
+                    let c = c.trans((total_width - to_start.get_size().0 as f64) / 2.0, 200.0);
+                    image(&*to_start, c.transform, g);
+                }
+            });
+            if let Some(_) = e.release_args() {
+                start_screen = false;
+            }
+            e.update(|args| {
+                d += args.dt;
+                if d > 1.0 {
+                    d = 0.0;
+                    blink = !blink;
+                }
+            });
+        } else {
+            e.draw_2d(|_c, g| {
+                use graphics::*;
 
-        e.update(|args| {
-            left_board.update(args.dt, &mut right_board, &left_render_state);
-            right_board.update(args.dt, &mut left_board, &right_render_state);
-        });
+                // Black background
+                clear([0.0, 0.0, 0.0, 1.0], g);
+            });
 
-        // TODO: This return code pattern sucks
-        match right_board_renderer.render(&e, &mut right_board) {
-            Some(state) => { right_render_state = state },
-            None => {}
+            left_player.update(&e, &mut left_board);
+            right_player.update(&e, &mut right_board);
+
+            e.update(|args| {
+                left_board.update(args.dt, &mut right_board, &left_render_state);
+                right_board.update(args.dt, &mut left_board, &right_render_state);
+            });
+
+            // TODO: This return code pattern sucks
+            match right_board_renderer.render(&e, &mut right_board) {
+                Some(state) => { right_render_state = state },
+                None => {}
+            }
+            // TODO: This return code pattern sucks
+            match left_board_renderer.render(&e, &mut left_board) {
+                Some(state) => { left_render_state = state },
+                None => {}
+            }
+
+            // TODO: lol do clipping properly
+            e.draw_2d(|c, g| {
+                Rectangle::new([0.0, 0.0, 0.0, 1.0])
+                    .draw([0.0, 0.0, total_width as f64, gutter as f64],
+                          &c.draw_state, c.transform, g);
+            });
         }
-        // TODO: This return code pattern sucks
-        match left_board_renderer.render(&e, &mut left_board) {
-            Some(state) => { left_render_state = state },
-            None => {}
-        }
-
-        // TODO: lol do clipping properly
-        e.draw_2d(|c, g| {
-            Rectangle::new([0.0, 0.0, 0.0, 1.0])
-                .draw([0.0, 0.0, total_width as f64, gutter as f64],
-                      &c.draw_state, c.transform, g);
-        });
     }
 }
