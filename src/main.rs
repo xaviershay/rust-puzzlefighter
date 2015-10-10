@@ -125,13 +125,6 @@ fn main() {
                 Some(state) => { left_render_state = state },
                 None => {}
             }
-
-            // TODO: lol do clipping properly
-            e.draw_2d(|c, g| {
-                Rectangle::new([0.0, 0.0, 0.0, 1.0])
-                    .draw([0.0, 0.0, total_width as f64, gutter as f64],
-                          &c.draw_state, c.transform, g);
-            });
         }
     }
 }

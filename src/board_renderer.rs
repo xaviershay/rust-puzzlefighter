@@ -90,9 +90,9 @@ impl BoardRenderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> 
     fn cell_w(&self) -> f64 { self.cell_dimensions.w() as f64 }
     fn cell_h(&self) -> f64 { self.cell_dimensions.h() as f64 }
     fn grid_h(&self) -> f64 { self.dimensions.h() as f64 }
-    fn x_gutter(&self) -> f64 { self.cell_w() * 1.5 }
+    fn x_gutter(&self) -> f64 { self.cell_w() * 2.0 }
     fn grid_margin(&self) -> PixelPosition {
-        PixelPosition::new(self.cell_w() * 1.5, 0.0)
+        PixelPosition::new(self.x_gutter(), 29.0)
     }
 
     // Scale grid coordinates to pixel coordinates for a block.
@@ -164,7 +164,7 @@ impl BoardRenderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> 
                     // Top left
                     let pos = PixelPosition::new(
                         block.x() as f64,
-                        (2 - block.y()) as f64 * self.cell_h());
+                        (2 - block.y()) as f64 * self.cell_h() + self.grid_margin().y());
 
                     self.update_block_to_pos(sprite_id, block, pos);
                 }
@@ -255,22 +255,68 @@ impl BoardRenderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> 
         });
 
         event.draw_2d(|c, g| {
-            let cam = &c.trans(self.position.x() as f64 - self.cell_dimensions.w() as f64 / 2.0,
-                               self.position.y() as f64 - self.cell_dimensions.h() as f64 / 2.0);
+            let cam = &c.trans(self.position.x() as f64 - 29.0,
+                               self.position.y() as f64 - 29.0);
                                
-            // Board bounding box
+            let (clip_x, clip_y, clip_w, clip_h) = (
+                self.position.x() as u16 - 29,
+                (self.position.y() + self.grid_margin().y()) as u16 - 29,
+                (self.cell_dimensions.w() as f64 * self.dimensions.w() as f64 + self.grid_margin().x() as f64) as u16,
+                (self.cell_dimensions.h() as f64 * self.dimensions.h() as f64) as u16
+            );
+            let (clip_x, clip_y, clip_w, clip_h) =
+                (clip_x, c.viewport.unwrap().draw_size[1] as u16 - clip_y - clip_h, clip_w, clip_h);
+
+            // Board background box
             {
                 use graphics::*;
+                let cam = &cam
+                    .trans(-29.0, -29.0) // Top-left corner of inner board
+                    .trans(
+                        self.grid_margin().x(),
+                        self.grid_margin().y(),
+                    );
 
-                let cam = &cam.trans(
-                    self.x_gutter() + self.cell_dimensions.w() as f64 / -2.0,
-                    self.cell_dimensions.h() as f64 / 2.0).trans(-29.0, -29.0);
                 let board = self.textures.get("board.png".to_string());
                 image(&*board, cam.transform, g);
             }
 
-            self.scene.draw(cam.transform, g);
+            let cam = cam.trans(
+                self.cell_dimensions.w() as f64 / 2.0,
+                self.cell_dimensions.h() as f64 / -2.0,
+            );
+
+            for child in &self.scene.children {
+               use graphics::*;
+
+                let (w, h) = (self.cell_dimensions.w(), self.cell_dimensions.h());
+                let w = w as f64;
+                let h = h as f64;
+                let anchor = [child.get_anchor().0 * w, child.get_anchor().1 * h];
+
+                let transformed = cam.trans(child.get_position().0, child.get_position().1)
+                                   .rot_deg(child.get_rotation())
+                                   .scale(child.get_scale().0, child.get_scale().1);
+
+                let ref tex = *child.get_texture();
+                let color = child.get_color();
+
+                // Exploding blocks should not be clipped
+                let draw_state = default_draw_state();
+                let clipped = &draw_state.scissor(clip_x, clip_y, clip_w, clip_h);
+                let state = if child.get_opacity() < 1.0 {
+                    draw_state
+                } else {
+                    clipped
+                };
+
+                Image::new()
+                    .color([color.0, color.1, color.2, child.get_opacity()])
+                    .rect([-anchor[0], -anchor[1], w, h])
+                    .draw(&**tex, &state, transformed.transform, g);
+            }
         });
+
         result
     }
 }
