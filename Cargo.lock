@@ -10,7 +10,7 @@ dependencies = [
  "piston-ai_behavior 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "piston-gfx_texture 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "piston2d-graphics 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piston2d-sprite 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piston2d-sprite 0.17.0 (git+https://github.com/PistonDevelopers/sprite)",
  "piston_window 0.23.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pistoncore-sdl2_window 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.11 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -509,7 +509,7 @@ dependencies = [
 [[package]]
 name = "piston2d-sprite"
 version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+source = "git+https://github.com/PistonDevelopers/sprite#22645e2ca52799cd410cdf01c19dcf976f45d147"
 dependencies = [
  "interpolation 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "piston-ai_behavior 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
