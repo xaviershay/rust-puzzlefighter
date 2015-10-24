@@ -32,5 +32,9 @@ bitflags = "*"
 name = "generate_tiles"
 path = "examples/generate_tiles.rs"
 
+[[example]]
+name = "train_ai"
+path = "examples/train_ai.rs"
+
 [dev_dependencies]
 tempdir = "0.3"

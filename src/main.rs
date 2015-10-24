@@ -113,10 +113,10 @@ fn main() {
                 image(&*ferns, c.transform, g);
             });
 
-            left_player.update(&e, &mut left_board);
-            right_player.update(&e, &mut right_board);
-
             e.update(|args| {
+                left_player.update(args.dt, &mut left_board);
+                right_player.update(args.dt, &mut right_board);
+
                 left_board.update(args.dt, &mut right_board, &left_render_state);
                 right_board.update(args.dt, &mut left_board, &right_render_state);
             });

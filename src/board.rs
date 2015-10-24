@@ -209,6 +209,10 @@ impl Board {
         list
     }
 
+    pub fn full(&self) -> bool {
+        self.grid.at(GridPosition::new(3, self.dimensions.h() as i8 - 1)).is_some()
+    }
+
     pub fn update(&mut self, dt: f64, enemy: &mut Board, render_state: &RenderState) {
         match self.phase {
             Phase::AgeAndAttack => {
