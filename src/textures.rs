@@ -54,8 +54,8 @@ impl Textures<gfx_device_gl::Resources> {
 }
 
 impl<R: gfx::Resources> Textures<R> {
-    pub fn get(&self, key: String) -> Rc<Texture<R>> {
-        self.textures.get(&key)
+    pub fn get(&self, key: &String) -> Rc<Texture<R>> {
+        self.textures.get(key)
             .expect(&format!("No texture exists for {}", key))
             .clone()
     }

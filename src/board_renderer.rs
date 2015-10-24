@@ -73,7 +73,7 @@ impl BoardRenderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> 
 
         // Use an arbitrary block to get the cell dimensions. Assumes they are
         // all the same.
-        let texture = textures.get(Block::new(Color::Blue, false).to_texture_name());
+        let texture = textures.get(&Block::new(Color::Blue, false).to_texture_name());
         let cell_dimensions = Dimension::from_tuple(texture.get_size());
 
         BoardRenderer {
@@ -109,7 +109,7 @@ impl BoardRenderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> 
     fn sprite_for(&mut self, block: &PositionedBlock) -> Uuid {
         let exists = { self.sprites.contains_key(&block.block()) };
         if !exists {
-            let sprite = Sprite::from_texture(self.textures.get(block.to_texture_name()));
+            let sprite = Sprite::from_texture(self.textures.get(&block.to_texture_name()));
             let sprite_id = self.scene.add_child(sprite);
             self.sprites.insert(block.block(), sprite_id);
             self.update_block(sprite_id, block)
@@ -134,7 +134,7 @@ impl BoardRenderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> 
         let sprite = { self.scene.child_mut(sprite_id).unwrap() };
 
         sprite.set_position(pos.x(), pos.y());
-        sprite.set_texture(self.textures.get(block.to_texture_name()));
+        sprite.set_texture(self.textures.get(&block.to_texture_name()));
     }
 
     pub fn render(&mut self, event: &GameWindow, board: &mut Board) -> Option<RenderState> {
@@ -277,7 +277,7 @@ impl BoardRenderer<Texture<gfx_device_gl::Resources>, gfx_device_gl::Resources> 
                         self.grid_margin().y(),
                     );
 
-                let board = self.textures.get("board.png".to_string());
+                let board = self.textures.get(&"board.png".to_string());
                 image(&*board, cam.transform, g);
             }
 
