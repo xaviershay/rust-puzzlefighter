@@ -27,3 +27,7 @@ Some debug keys are enabled in non-release builds:
     Q:   Load blocks from board.txt
     1-4: Set next piece to a colored breaker
     5:   Drop an attack.
+
+### Requirements
+
+* [OpenGL 3](https://github.com/xaviershay/rust-puzzlefighter/issues/18#issuecomment-167256699)
