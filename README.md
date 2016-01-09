@@ -1,5 +1,14 @@
 A puzzle fighter/swordfighting clone as an excuse for me to learn rust.
 
+# Gameplay
+
+A two player head-to-head game. Match falling blocks by color, then explode
+them with special breaker blocks. This sends temporarily unbreakable blocks
+over to your opponent. Chain combos for larger attacks! First one to run out of
+space loses.
+
+This is a mixed clone of [Super Puzzle Fighter II Turbo](https://en.wikipedia.org/wiki/Super_Puzzle_Fighter_II_Turbo) (aka _Puzzle Fighter_) and the [Swordfight mechanic](https://yppedia.puzzlepirates.com/Swordfight) from Puzzle Pirates.
+
 # Features
 
 * Two-player keyboard (WASDC, arrows+space) or gamepad controls.
